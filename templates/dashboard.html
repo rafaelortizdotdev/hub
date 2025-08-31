@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <title>HONOR Supervisor Hub - Dashboard</title>
+  <style>
+    .swal2-popup { font-size: 0.95rem; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <!-- Navigation Header -->
+  <nav class="bg-white shadow-sm border-b">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-16">
+        <div class="flex items-center">
+          <h1 class="text-xl font-bold text-blue-600">HONOR Supervisor Hub</h1>
+        </div>
+        <div class="flex items-center space-x-4">
+          <span class="text-sm text-gray-700">
+            Bienvenido, <span class="font-medium">{{ session.name }}</span>
+            <span class="text-xs text-gray-500 ml-2">({{ session.honor_id }})</span>
+          </span>
+
+          <a href="{{ url_for('logout') }}" 
+             class="px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md">
+            Cerrar Sesión
+          </a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Welcome Section -->
+    <div class="mb-8">
+      <div class="flex justify-between items-center">
+        <div>
+          <h2 class="text-2xl font-bold text-gray-900 mb-2">Dashboard del Supervisor</h2>
+          <p class="text-gray-600">Gestiona tus tiendas y equipo</p>
+        </div>
+        <div class="flex space-x-3">
+          <a href="{{ url_for('store_assignment') }}" 
+             class="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-md">
+            🏪 Asignación de Tiendas
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+          <div class="p-2 bg-blue-100 rounded-lg">
+            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+            </svg>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm font-medium text-gray-600">Tiendas Asignadas</p>
+            <p class="text-2xl font-bold text-gray-900">{{ stores|length }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+          <div class="p-2 bg-green-100 rounded-lg">
+            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+            </svg>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm font-medium text-gray-600">Promotores</p>
+            <p class="text-2xl font-bold text-gray-900">
+              {% set promoters = team_members|selectattr('user_type_name', 'equalto', 'AMBASSADOR_PROMOTER')|list %}
+              {{ promoters|length }}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+          <div class="p-2 bg-yellow-100 rounded-lg">
+            <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+            </svg>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm font-medium text-gray-600">Tiendas por Crear</p>
+            <p class="text-2xl font-bold text-gray-900">{{ pending_stores|length }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+          <div class="p-2 bg-purple-100 rounded-lg">
+            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm font-medium text-gray-600">Ventas del Mes</p>
+            <p class="text-2xl font-bold text-gray-900">
+              {% set total_sales = stores|sum(attribute='sales_last_month') %}
+              {{ "${:,.0f}".format(total_sales) if total_sales else "N/A" }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pending Stores Section -->
+    <div class="bg-white rounded-lg shadow mb-8">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h3 class="text-lg font-medium text-gray-900">Tiendas por Crear</h3>
+      </div>
+      <div class="overflow-x-auto">
+        {% if pending_stores %}
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tienda</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empresa</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ubicación</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mercado/CC</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacidad</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ventas Mes</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              {% for store in pending_stores %}
+                <tr class="hover:bg-gray-50">
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div>
+                      <div class="text-sm font-medium text-gray-900">{{ store.store_name }}</div>
+                      <div class="text-sm text-gray-500">Nivel: {{ store.level or 'N/A' }} | Local: {{ store.local or 'N/A' }}</div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {{ store.client_name }}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">{{ store.city }}</div>
+                    <div class="text-sm text-gray-500">{{ store.state }}</div>
+                    <div class="text-sm text-gray-400">{{ store.urban_municipality or 'N/A' }}</div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {{ store.market_center }}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {{ store.capacity or 'N/A' }}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {% if store.sales_last_month %}
+                      ${{ "{:,.0f}".format(store.sales_last_month) }}
+                    {% else %}
+                      N/A
+                    {% endif %}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center space-x-2">
+                      <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                        Pendiente
+                      </span>
+                      <button onclick="approveStore({{ store.id }})" 
+                              class="px-2 py-1 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded">
+                        Aprobar
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="px-6 py-8 text-center text-gray-500">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">No hay tiendas pendientes</h3>
+            <p class="mt-1 text-sm text-gray-500">Todas las tiendas han sido creadas.</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Stores Section -->
+    <div class="bg-white rounded-lg shadow mb-8">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h3 class="text-lg font-medium text-gray-900">Mis Tiendas</h3>
+      </div>
+      <div class="overflow-x-auto">
+        {% if stores %}
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tienda</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empresa</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ubicación</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacidad</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ventas Mes</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              {% for store in stores %}
+                <tr class="hover:bg-gray-50">
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div>
+                      <div class="text-sm font-medium text-gray-900">{{ store.store_name or store.store_name_full or 'N/A' }}</div>
+                      {% if store.store_code %}
+                        <div class="text-sm text-gray-500">{{ store.store_code }}</div>
+                      {% endif %}
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {{ store.company or 'N/A' }}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">{{ store.city_name or 'N/A' }}</div>
+                    <div class="text-sm text-gray-500">{{ store.province_name or 'N/A' }}</div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {{ store.capacity or 'N/A' }}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {% if store.sales_last_month %}
+                      ${{ "{:,.0f}".format(store.sales_last_month) }}
+                    {% else %}
+                      N/A
+                    {% endif %}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full 
+                      {% if store.table_available %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                      {{ 'Disponible' if store.table_available else 'Ocupada' }}
+                    </span>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="px-6 py-8 text-center text-gray-500">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">No hay tiendas asignadas</h3>
+            <p class="mt-1 text-sm text-gray-500">Contacta a tu administrador para asignarte tiendas.</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Team Members Section -->
+    <div class="bg-white rounded-lg shadow">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h3 class="text-lg font-medium text-gray-900">Mi Equipo</h3>
+      </div>
+      <div class="overflow-x-auto">
+        {% if team_members %}
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Miembro</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Honor</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rol</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Región</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              {% for member in team_members %}
+                <tr class="hover:bg-gray-50">
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">{{ member.name }}</div>
+                    {% if member.position_id %}
+                      <div class="text-sm text-gray-500">{{ member.position_id }}</div>
+                    {% endif %}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {{ member.honor_id }}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full 
+                      {% if member.user_type_name == 'AMBASSADOR_PROMOTER' %}bg-blue-100 text-blue-800
+                      {% elif member.user_type_name == 'STORE_STAFF_2' %}bg-purple-100 text-purple-800
+                      {% else %}bg-gray-100 text-gray-800{% endif %}">
+                      {{ member.user_type_name.replace('_', ' ').title() }}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {{ member.region or 'N/A' }}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full 
+                      {% if member.status == 'ACTIVE' %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                      {{ member.status or 'N/A' }}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                      Creado
+                    </span>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="px-6 py-8 text-center text-gray-500">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">No hay miembros en tu equipo</h3>
+            <p class="mt-1 text-sm text-gray-500">Los miembros del equipo aparecerán aquí cuando sean asignados.</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Pending Clients Section -->
+    <div class="bg-white rounded-lg shadow mt-8">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h3 class="text-lg font-medium text-gray-900">Clientes Pendientes</h3>
+      </div>
+      <div class="overflow-x-auto">
+        {% if pending_clients %}
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacto</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ubicación</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              {% for client in pending_clients %}
+                <tr class="hover:bg-gray-50">
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">{{ client.name }}</div>
+                    <div class="text-sm text-gray-500">{{ client.gender }}</div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {{ client.client_id }}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">+58 {{ client.contact_number }}</div>
+                    {% if client.email %}
+                      <div class="text-sm text-gray-500">{{ client.email }}</div>
+                    {% endif %}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">{{ client.city }}</div>
+                    <div class="text-sm text-gray-500">{{ client.province }}</div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center space-x-2">
+                      <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                        Pendiente
+                      </span>
+                      <button onclick="approveClient({{ client.id }})" 
+                              class="px-2 py-1 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded">
+                        Aprobar
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="px-6 py-8 text-center text-gray-500">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">No hay clientes pendientes</h3>
+            <p class="mt-1 text-sm text-gray-500">Todos los clientes han sido creados.</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const Toast = Swal.mixin({ 
+      toast: true, 
+      position: 'top-end', 
+      showConfirmButton: false, 
+      timer: 3500, 
+      timerProgressBar: true 
+    });
+
+    // Show success message if redirected from login
+    {% if request.args.get('login_success') %}
+      Toast.fire({ icon: 'success', title: '¡Bienvenido al sistema!' });
+    {% endif %}
+
+    // Function to approve a store
+    function approveStore(storeId) {
+      Swal.fire({
+        title: '¿Aprobar tienda?',
+        text: 'Esta acción marcará la tienda como aprobada',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#10B981',
+        cancelButtonColor: '#6B7280',
+        confirmButtonText: 'Sí, aprobar',
+        cancelButtonText: 'Cancelar'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          fetch(`/approve-store/${storeId}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              Toast.fire({ icon: 'success', title: 'Tienda aprobada exitosamente' });
+              setTimeout(() => location.reload(), 1500);
+            } else {
+              Toast.fire({ icon: 'error', title: 'Error al aprobar la tienda' });
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            Toast.fire({ icon: 'error', title: 'Error al aprobar la tienda' });
+          });
+        }
+      });
+    }
+
+    // Function to approve a client
+    function approveClient(clientId) {
+      Swal.fire({
+        title: '¿Aprobar cliente?',
+        text: 'Esta acción marcará el cliente como aprobado',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#10B981',
+        cancelButtonColor: '#6B7280',
+        confirmButtonText: 'Sí, aprobar',
+        cancelButtonText: 'Cancelar'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          fetch(`/approve-client/${clientId}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              Toast.fire({ icon: 'success', title: 'Cliente aprobado exitosamente' });
+              setTimeout(() => location.reload(), 1500);
+            } else {
+              Toast.fire({ icon: 'error', title: 'Error al aprobar el cliente' });
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            Toast.fire({ icon: 'error', title: 'Error al aprobar el cliente' });
+          });
+        }
+      });
+    }
+  </script>
+</body>
+</html>
+
