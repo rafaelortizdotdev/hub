@@ -10,11 +10,11 @@
     .swal2-popup { font-size: 0.95rem; }
   </style>
 </head>
-<body class="bg-gray-50 min-h-screen flex flex-col items-center justify-center p-4">
-  <div class="w-full max-w-md bg-white rounded-xl shadow-md p-6">
+<body class="bg-gray-50 min-h-screen flex flex-col">
+  <div class="flex-1 w-full flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-white rounded-xl shadow-md p-6">
     <div class="text-center mb-6">
       <h1 class="text-3xl font-bold text-blue-600 mb-2">HONOR Supervisor Hub</h1>
-      <p class="text-gray-600">Acceso exclusivo para supervisores</p>
     </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -51,16 +51,11 @@
         </button>
       </div>
     </form>
-
-    <div class="mt-6 text-center">
-      <p class="text-xs text-gray-500">
-        Solo personal autorizado puede acceder a este sistema
-      </p>
     </div>
   </div>
 
   <!-- Footer -->
-  <footer class="w-full max-w-md mt-6 text-center text-xs text-gray-500">
+  <footer class="mt-auto w-full text-center text-xs text-gray-500 py-4">
     <div>© HONOR Venezuela 2023–2025. Todos los derechos reservados.</div>
   </footer>
 
