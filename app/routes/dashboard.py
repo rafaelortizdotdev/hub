@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, session
 
-from ..db import get_db_connection
+from ..database import get_db_connection
 
 dashboard_bp = Blueprint('dashboard', __name__)
 

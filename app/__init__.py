@@ -39,7 +39,7 @@ def create_app():
     def populate_table(table, data_file):
         """Populate any table from JSON/CSV file"""
         import json
-        from .db import get_db_connection
+        from .database import get_db_connection
         
         with open(data_file, 'r') as f:
             if data_file.endswith('.json'):
@@ -65,11 +65,48 @@ def create_app():
     @click.argument('table')
     def clear_table(table):
         """Clear all data from a table"""
-        from .db import get_db_connection
+        from .database import get_db_connection
         conn = get_db_connection()
         conn.execute(f"DELETE FROM {table}")
         conn.commit()
         conn.close()
         print(f"Cleared table {table}")
+
+    @app.cli.command()
+    @click.argument('table')
+    @click.argument('out_file')
+    @click.option('--format', 'fmt', type=click.Choice(['json', 'csv']), default='json', help='Output format')
+    def generate_template(table, out_file, fmt):
+        """Generate a JSON/CSV template for inserting rows into a table."""
+        import json
+        import csv
+        from .database import get_db_connection
+
+        conn = get_db_connection()
+        # Read table schema
+        columns = [row[1] for row in conn.execute(f'PRAGMA table_info({table})')]
+        conn.close()
+
+        if not columns:
+            click.echo(f"Table '{table}' not found.")
+            return
+
+        # Heuristic: exclude typical auto fields from template input
+        excluded = { 'id' }
+        template_cols = [c for c in columns if c not in excluded]
+
+        if fmt == 'json':
+            # Create one sample object with empty values
+            obj = {col: "" for col in template_cols}
+            with open(out_file, 'w', encoding='utf-8') as f:
+                json.dump([obj], f, ensure_ascii=False, indent=2)
+        else:
+            with open(out_file, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.DictWriter(f, fieldnames=template_cols)
+                writer.writeheader()
+                writer.writerow({col: '' for col in template_cols})
+
+        click.echo(f"Template for table '{table}' written to {out_file} in {fmt.upper()} format.")
+        click.echo (f"Cmd for populating table: flask populate_table {table} {out_file}")
 
     return app

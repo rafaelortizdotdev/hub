@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 
-from ..db import get_db_connection
+from ..database import get_db_connection
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -15,8 +15,8 @@ def index():
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        honor_id = request.form['honor_id'].strip()
-        password = request.form['password'].strip()
+        honor_id = (request.form.get('id') or '').strip().lower()
+        password = (request.form.get('password') or '').strip()
 
         if not honor_id or not password:
             flash('Por favor ingrese tanto el ID de Honor como la contraseña', 'error')
@@ -24,7 +24,7 @@ def login():
 
         conn = get_db_connection()
         user = conn.execute(
-            'SELECT * FROM users WHERE UPPER(honor_id) = UPPER(?) AND user_type_id = 1 AND status = "ACTIVE"',
+            'SELECT * FROM users WHERE UPPER(id) = UPPER(?) AND user_type_id = 1 AND status = "ACTIVE"',
             (honor_id,)
         ).fetchone()
         conn.close()
@@ -39,7 +39,7 @@ def login():
             return redirect(url_for('auth.login'))
 
         session['user_id'] = user['id']
-        session['honor_id'] = user['honor_id']
+        session['honor_id'] = user['id']
         session['name'] = user['name']
         session['user_type'] = 'SUPERVISOR'
         flash('Inicio de sesión exitoso', 'success')

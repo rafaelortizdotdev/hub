@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request, session
 
-from ..db import get_db_connection
+from ..database import get_db_connection
 
 api_bp = Blueprint('api', __name__)
 
