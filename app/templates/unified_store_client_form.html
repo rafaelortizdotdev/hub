@@ -26,8 +26,8 @@
                 </div>
                 <div class="flex items-center space-x-4">
                     <span class="text-sm text-gray-700">{{ session.name }}</span>
-                    <a href="{{ url_for('dashboard') }}" class="text-blue-600 hover:text-blue-800 text-sm">Inicio</a>
-                    <a href="{{ url_for('logout') }}" class="text-red-600 hover:text-red-800 text-sm">Cerrar Sesión</a>
+                    <a href="{{ url_for('dashboard.dashboard') }}" class="text-blue-600 hover:text-blue-800 text-sm">Inicio</a>
+                    <a href="{{ url_for('auth.logout') }}" class="text-red-600 hover:text-red-800 text-sm">Cerrar Sesión</a>
                 </div>
             </div>
         </div>

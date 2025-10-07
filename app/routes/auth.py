@@ -15,7 +15,7 @@ def index():
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        honor_id = (request.form.get('id') or '').strip().lower()
+        honor_id = (request.form.get('id') or '').strip()
         password = (request.form.get('password') or '').strip()
 
         if not honor_id or not password:

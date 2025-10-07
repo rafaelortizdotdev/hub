@@ -75,8 +75,9 @@ if __name__ == '__main__':
     print(f"Database URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
     print()
     
-"""
+
 inspector = DatabaseInspector()
+"""
 
 # Get all tables
 tables = inspector.list_tables()
@@ -90,3 +91,7 @@ info = inspector.get_table_info('users')
 # Print complete schema
 inspector.print_schema()
 """
+
+columns = inspector.get_columns("user_types")
+
+#print(columns)
