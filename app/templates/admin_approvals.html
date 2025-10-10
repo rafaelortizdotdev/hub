@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Approvals - HONOR Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .badge-pending {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+        .badge-salesman {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+        .badge-promoter {
+            background-color: #e0e7ff;
+            color: #4338ca;
+        }
+        .approval-card {
+            border: 2px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: border-color 0.2s;
+        }
+        .approval-card:hover {
+            border-color: #3b82f6;
+        }
+        .approval-card.selected {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <h1 class="text-xl font-semibold text-gray-900">HONOR Hub - Admin Approvals</h1>
+                <a href="{{ url_for('dashboard.dashboard') }}" class="text-blue-600 hover:text-blue-800">← Back to Dashboard</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">Pending Assignment Approvals</h2>
+            <p class="text-gray-600">Review and approve or reject assignment changes submitted by supervisors</p>
+        </div>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 bg-yellow-100 rounded-full p-3">
+                        <svg class="h-6 w-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-500">Pending Assignments</p>
+                        <p class="text-2xl font-semibold text-gray-900" id="statPending">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 bg-green-100 rounded-full p-3">
+                        <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-500">Approved Today</p>
+                        <p class="text-2xl font-semibold text-gray-900" id="statApproved">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 bg-red-100 rounded-full p-3">
+                        <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-500">Rejected Today</p>
+                        <p class="text-2xl font-semibold text-gray-900" id="statRejected">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Tabs -->
+        <div class="bg-white rounded-lg shadow mb-6">
+            <div class="border-b border-gray-200">
+                <nav class="flex space-x-8 px-6" aria-label="Tabs">
+                    <button class="filter-tab border-b-2 border-blue-500 text-blue-600 py-4 px-1 font-medium text-sm" data-status="PENDING">
+                        Pending
+                    </button>
+                    <button class="filter-tab border-b-2 border-transparent text-gray-500 hover:text-gray-700 py-4 px-1 font-medium text-sm" data-status="APPROVED">
+                        Approved
+                    </button>
+                    <button class="filter-tab border-b-2 border-transparent text-gray-500 hover:text-gray-700 py-4 px-1 font-medium text-sm" data-status="REJECTED">
+                        Rejected
+                    </button>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Pending Assignments List -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="mb-4 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-900">Assignment Requests</h3>
+                <div class="flex space-x-3">
+                    <button id="btnBulkApprove" class="px-4 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed" disabled>
+                        ✓ Approve Selected
+                    </button>
+                    <button id="btnBulkReject" class="px-4 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed" disabled>
+                        ✗ Reject Selected
+                    </button>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loadingState" class="text-center py-12">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <p class="mt-2 text-gray-600">Loading assignments...</p>
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="hidden text-center py-12">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <h3 class="mt-2 text-sm font-medium text-gray-900">No pending assignments</h3>
+                <p class="mt-1 text-sm text-gray-500">All assignment requests have been reviewed</p>
+            </div>
+
+            <!-- Assignments List -->
+            <div id="assignmentsList">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class AdminApprovalManager {
+            constructor() {
+                this.currentStatus = 'PENDING';
+                this.assignments = [];
+                this.selectedIds = new Set();
+                this.initializeEventListeners();
+                this.loadAssignments();
+            }
+
+            initializeEventListeners() {
+                // Filter tabs
+                document.querySelectorAll('.filter-tab').forEach(tab => {
+                    tab.addEventListener('click', (e) => {
+                        const newStatus = e.target.dataset.status;
+                        this.switchStatus(newStatus);
+                    });
+                });
+
+                // Bulk action buttons
+                document.getElementById('btnBulkApprove').addEventListener('click', () => this.bulkApprove());
+                document.getElementById('btnBulkReject').addEventListener('click', () => this.bulkReject());
+            }
+
+            switchStatus(newStatus) {
+                // Update active tab
+                document.querySelectorAll('.filter-tab').forEach(tab => {
+                    if (tab.dataset.status === newStatus) {
+                        tab.classList.add('border-blue-500', 'text-blue-600');
+                        tab.classList.remove('border-transparent', 'text-gray-500');
+                    } else {
+                        tab.classList.remove('border-blue-500', 'text-blue-600');
+                        tab.classList.add('border-transparent', 'text-gray-500');
+                    }
+                });
+
+                this.currentStatus = newStatus;
+                this.selectedIds.clear();
+                this.loadAssignments();
+            }
+
+            async loadAssignments() {
+                try {
+                    this.showLoading();
+
+                    const response = await fetch(`/api/admin/assignments/pending?status=${this.currentStatus}`);
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        this.assignments = data.assignments || [];
+                        this.updateStats(data.stats || {});
+                        this.render();
+                    } else {
+                        throw new Error(data.error || 'Failed to load assignments');
+                    }
+                } catch (error) {
+                    console.error('Error loading assignments:', error);
+                    this.showEmpty();
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Failed to load assignment requests'
+                    });
+                }
+            }
+
+            updateStats(stats) {
+                document.getElementById('statPending').textContent = stats.pending || 0;
+                document.getElementById('statApproved').textContent = stats.approved_today || 0;
+                document.getElementById('statRejected').textContent = stats.rejected_today || 0;
+            }
+
+            render() {
+                const container = document.getElementById('assignmentsList');
+                
+                if (this.assignments.length === 0) {
+                    this.showEmpty();
+                    return;
+                }
+
+                this.hideLoading();
+                this.hideEmpty();
+
+                container.innerHTML = this.assignments.map(assignment => `
+                    <div class="approval-card ${this.selectedIds.has(assignment.id) ? 'selected' : ''}" 
+                         data-id="${assignment.id}">
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-start space-x-4 flex-1">
+                                ${this.currentStatus === 'PENDING' ? `
+                                <input type="checkbox" 
+                                       class="mt-1 h-5 w-5 text-blue-600 rounded border-gray-300"
+                                       onchange="approvalManager.toggleSelection(${assignment.id})">
+                                ` : ''}
+                                
+                                <div class="flex-1">
+                                    <div class="flex items-center space-x-3 mb-2">
+                                        <h4 class="text-lg font-semibold text-gray-900">${assignment.staff_name}</h4>
+                                        <span class="badge badge-${assignment.role.toLowerCase()}">${assignment.role}</span>
+                                        ${assignment.status !== 'PENDING' ? `
+                                        <span class="badge ${assignment.status === 'APPROVED' ? 'badge-pending' : 'bg-red-100 text-red-800'}">${assignment.status}</span>
+                                        ` : ''}
+                                    </div>
+                                    
+                                    <div class="grid grid-cols-2 gap-4 text-sm">
+                                        <div>
+                                            <span class="text-gray-500">Store:</span>
+                                            <span class="font-medium text-gray-900">${assignment.store_name}</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-500">Supervisor:</span>
+                                            <span class="font-medium text-gray-900">${assignment.supervisor_name}</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-500">Requested:</span>
+                                            <span class="text-gray-700">${new Date(assignment.assigned_date).toLocaleString()}</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-500">Staff Type:</span>
+                                            <span class="text-gray-700">${assignment.staff_type === 'user' ? 'Active User' : 'Pending Client'}</span>
+                                        </div>
+                                    </div>
+
+                                    ${assignment.rejection_reason ? `
+                                    <div class="mt-3 p-3 bg-red-50 border border-red-200 rounded">
+                                        <p class="text-sm text-red-800">
+                                            <strong>Rejection Reason:</strong> ${assignment.rejection_reason}
+                                        </p>
+                                    </div>
+                                    ` : ''}
+
+                                    ${assignment.approved_date ? `
+                                    <div class="mt-2 text-sm text-gray-500">
+                                        ${assignment.status} by ${assignment.approver_name || 'Admin'} on ${new Date(assignment.approved_date).toLocaleString()}
+                                    </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+
+                            ${this.currentStatus === 'PENDING' ? `
+                            <div class="flex space-x-2 ml-4">
+                                <button onclick="approvalManager.approveOne(${assignment.id})"
+                                        class="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700">
+                                    Approve
+                                </button>
+                                <button onclick="approvalManager.rejectOne(${assignment.id})"
+                                        class="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700">
+                                    Reject
+                                </button>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `).join('');
+
+                this.updateBulkButtons();
+            }
+
+            toggleSelection(id) {
+                if (this.selectedIds.has(id)) {
+                    this.selectedIds.delete(id);
+                } else {
+                    this.selectedIds.add(id);
+                }
+                this.render();
+            }
+
+            updateBulkButtons() {
+                const hasSelection = this.selectedIds.size > 0 && this.currentStatus === 'PENDING';
+                document.getElementById('btnBulkApprove').disabled = !hasSelection;
+                document.getElementById('btnBulkReject').disabled = !hasSelection;
+            }
+
+            async approveOne(id) {
+                await this.approveAssignments([id]);
+            }
+
+            async bulkApprove() {
+                if (this.selectedIds.size === 0) return;
+                await this.approveAssignments(Array.from(this.selectedIds));
+            }
+
+            async approveAssignments(ids) {
+                try {
+                    const response = await fetch('/api/admin/assignments/approve', {
+                        method: 'PATCH',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ assignment_ids: ids })
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Approved!',
+                            text: `${ids.length} assignment(s) have been approved`,
+                            confirmButtonColor: '#10b981'
+                        });
+                        this.selectedIds.clear();
+                        this.loadAssignments();
+                    } else {
+                        throw new Error(result.error || 'Failed to approve');
+                    }
+                } catch (error) {
+                    console.error('Error approving:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: error.message || 'Failed to approve assignments'
+                    });
+                }
+            }
+
+            async rejectOne(id) {
+                const { value: reason } = await Swal.fire({
+                    title: 'Reject Assignment',
+                    input: 'textarea',
+                    inputLabel: 'Rejection Reason',
+                    inputPlaceholder: 'Enter reason for rejection...',
+                    inputAttributes: {
+                        'aria-label': 'Rejection reason'
+                    },
+                    showCancelButton: true,
+                    confirmButtonText: 'Reject',
+                    confirmButtonColor: '#ef4444',
+                    inputValidator: (value) => {
+                        if (!value) {
+                            return 'Please provide a reason for rejection';
+                        }
+                    }
+                });
+
+                if (reason) {
+                    await this.rejectAssignments([id], reason);
+                }
+            }
+
+            async bulkReject() {
+                if (this.selectedIds.size === 0) return;
+
+                const { value: reason } = await Swal.fire({
+                    title: `Reject ${this.selectedIds.size} Assignment(s)`,
+                    input: 'textarea',
+                    inputLabel: 'Rejection Reason',
+                    inputPlaceholder: 'Enter reason for rejection...',
+                    inputAttributes: {
+                        'aria-label': 'Rejection reason'
+                    },
+                    showCancelButton: true,
+                    confirmButtonText: 'Reject All',
+                    confirmButtonColor: '#ef4444',
+                    inputValidator: (value) => {
+                        if (!value) {
+                            return 'Please provide a reason for rejection';
+                        }
+                    }
+                });
+
+                if (reason) {
+                    await this.rejectAssignments(Array.from(this.selectedIds), reason);
+                }
+            }
+
+            async rejectAssignments(ids, reason) {
+                try {
+                    const response = await fetch('/api/admin/assignments/reject', {
+                        method: 'PATCH',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ 
+                            assignment_ids: ids,
+                            rejection_reason: reason
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Rejected',
+                            text: `${ids.length} assignment(s) have been rejected`,
+                            confirmButtonColor: '#ef4444'
+                        });
+                        this.selectedIds.clear();
+                        this.loadAssignments();
+                    } else {
+                        throw new Error(result.error || 'Failed to reject');
+                    }
+                } catch (error) {
+                    console.error('Error rejecting:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: error.message || 'Failed to reject assignments'
+                    });
+                }
+            }
+
+            showLoading() {
+                document.getElementById('loadingState').classList.remove('hidden');
+                document.getElementById('emptyState').classList.add('hidden');
+                document.getElementById('assignmentsList').innerHTML = '';
+            }
+
+            hideLoading() {
+                document.getElementById('loadingState').classList.add('hidden');
+            }
+
+            showEmpty() {
+                this.hideLoading();
+                document.getElementById('emptyState').classList.remove('hidden');
+                document.getElementById('assignmentsList').innerHTML = '';
+            }
+
+            hideEmpty() {
+                document.getElementById('emptyState').classList.add('hidden');
+            }
+        }
+
+        // Initialize
+        const approvalManager = new AdminApprovalManager();
+    </script>
+</body>
+</html>
+

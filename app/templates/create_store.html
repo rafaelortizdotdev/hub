@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Store - HONOR Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <h1 class="text-xl font-semibold text-gray-900">HONOR Hub</h1>
+                <a href="{{ url_for('dashboard.dashboard') }}" class="text-blue-600 hover:text-blue-800">← Back to Dashboard</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Create New Store</h2>
+            
+            <form id="storeForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Store Name *</label>
+                    <input type="text" name="store_name" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Company *</label>
+                    <select name="company" id="company" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                        <option value="">Select company...</option>
+                        {% for company in companies %}
+                        <option value="{{ company.name }}">{{ company.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">Or type new: <input type="text" id="newCompany" placeholder="New company name" class="px-2 py-1 border rounded text-sm"></p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Province *</label>
+                        <select name="province" id="province" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                            <option value="">Select province...</option>
+                            {% for province in provinces %}
+                            <option value="{{ province.name }}">{{ province.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">City *</label>
+                        <select name="city" id="city" required disabled
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100">
+                            <option value="">Select province first...</option>
+                            {% for city in cities %}
+                            <option value="{{ city.name }}" data-province="{{ city.province.name }}" data-city-id="{{ city.id }}">{{ city.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Market Center *</label>
+                    <select name="market_center" id="market_center" required disabled
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100">
+                        <option value="">Select city first...</option>
+                        {% for mc in market_centers %}
+                        <option value="{{ mc.name }}" data-city-id="{{ mc.city_id }}">{{ mc.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">Or type new: <input type="text" id="newMarketCenter" placeholder="New market center" class="px-2 py-1 border rounded text-sm" disabled></p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Street *</label>
+                    <input type="text" name="street" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Level *</label>
+                        <input type="text" name="level" required placeholder="PB, 1er Nivel, etc."
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Local *</label>
+                        <input type="text" name="local" required placeholder="1, N-105, etc."
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                    </div>
+                </div>
+
+                <div class="pt-4">
+                    <button type="submit" 
+                            class="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                        Create Store (Pending Approval)
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('storeForm');
+        const provinceSelect = document.getElementById('province');
+        const citySelect = document.getElementById('city');
+        const companySelect = document.getElementById('company');
+        const marketCenterSelect = document.getElementById('market_center');
+        const newCompanyInput = document.getElementById('newCompany');
+        const newMarketCenterInput = document.getElementById('newMarketCenter');
+        
+        // Filter cities by selected province
+        provinceSelect.addEventListener('change', () => {
+            const selectedProvince = provinceSelect.value;
+            const cityOptions = citySelect.querySelectorAll('option');
+            
+            if (selectedProvince) {
+                // Enable city dropdown
+                citySelect.disabled = false;
+                citySelect.classList.remove('bg-gray-100');
+                
+                // Filter cities
+                cityOptions.forEach(option => {
+                    if (option.value === '') {
+                        option.style.display = 'block';
+                        option.textContent = 'Select city...';
+                    } else {
+                        const provinceMatch = option.dataset.province === selectedProvince;
+                        option.style.display = provinceMatch ? 'block' : 'none';
+                    }
+                });
+            } else {
+                // Disable city dropdown
+                citySelect.disabled = true;
+                citySelect.classList.add('bg-gray-100');
+                cityOptions[0].textContent = 'Select province first...';
+            }
+            
+            // Reset city and market center
+            citySelect.value = '';
+            marketCenterSelect.value = '';
+            marketCenterSelect.disabled = true;
+            marketCenterSelect.classList.add('bg-gray-100');
+            newMarketCenterInput.disabled = true;
+        });
+        
+        // Filter market centers by selected city
+        citySelect.addEventListener('change', () => {
+            const selectedCityOption = citySelect.options[citySelect.selectedIndex];
+            const selectedCityId = selectedCityOption ? selectedCityOption.dataset.cityId : null;
+            const marketCenterOptions = marketCenterSelect.querySelectorAll('option');
+            
+            if (selectedCityId) {
+                // Enable market center dropdown
+                marketCenterSelect.disabled = false;
+                marketCenterSelect.classList.remove('bg-gray-100');
+                newMarketCenterInput.disabled = false;
+                
+                // Filter market centers
+                marketCenterOptions.forEach(option => {
+                    if (option.value === '') {
+                        option.style.display = 'block';
+                        option.textContent = 'Select market center...';
+                    } else {
+                        const cityMatch = option.dataset.cityId === selectedCityId;
+                        option.style.display = cityMatch ? 'block' : 'none';
+                    }
+                });
+            } else {
+                // Disable market center dropdown
+                marketCenterSelect.disabled = true;
+                marketCenterSelect.classList.add('bg-gray-100');
+                newMarketCenterInput.disabled = true;
+                marketCenterOptions[0].textContent = 'Select city first...';
+            }
+            
+            // Reset market center selection
+            marketCenterSelect.value = '';
+        });
+        
+        // Handle new company input
+        newCompanyInput.addEventListener('input', (e) => {
+            if (e.target.value.trim()) {
+                companySelect.value = '';
+                companySelect.disabled = true;
+            } else {
+                companySelect.disabled = false;
+            }
+        });
+        
+        companySelect.addEventListener('change', () => {
+            if (companySelect.value) {
+                newCompanyInput.value = '';
+            }
+        });
+        
+        // Handle new market center input
+        newMarketCenterInput.addEventListener('input', (e) => {
+            if (e.target.value.trim()) {
+                marketCenterSelect.value = '';
+                marketCenterSelect.disabled = true;
+            } else {
+                marketCenterSelect.disabled = false;
+            }
+        });
+        
+        marketCenterSelect.addEventListener('change', () => {
+            if (marketCenterSelect.value) {
+                newMarketCenterInput.value = '';
+            }
+        });
+        
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData);
+            
+            // Use new company name if provided
+            if (newCompanyInput.value.trim()) {
+                data.company = newCompanyInput.value.trim();
+            }
+            
+            // Use new market center if provided
+            if (newMarketCenterInput.value.trim()) {
+                data.market_center = newMarketCenterInput.value.trim();
+            }
+            
+            try {
+                const response = await fetch('/api/stores/create', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Store Created!',
+                        text: `Store code: ${result.store_code}. Pending admin approval.`,
+                        confirmButtonColor: '#2563eb'
+                    }).then(() => {
+                        window.location.href = '/dashboard';
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: result.error
+                    });
+                }
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to create store'
+                });
+            }
+        });
+    </script>
+</body>
+</html>
+

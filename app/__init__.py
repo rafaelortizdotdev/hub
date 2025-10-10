@@ -134,27 +134,50 @@ def create_app():
         click.echo (f"Cmd for populating table: flask populate_table {table} {out_file}")
 
     @app.cli.command("generate-all-templates")
-    @click.argument('out_dir')
-    def generate_all_templates(out_dir):
-        """Generate JSON templates for all core tables into OUT_DIR."""
+    @click.option('--out-dir', default='data', show_default=True, help='Output directory for templates')
+    @click.option('--only', multiple=True, help='Only generate specified tables (can repeat or comma-separated)')
+    @click.option('--except', 'except_', multiple=True, help='Skip specified tables (can repeat or comma-separated)')
+    def generate_all_templates(out_dir, only, except_):
+        """Generate JSON templates for all core tables into --out-dir (defaults to ./data)."""
         from .models import generate_general_template
         templates = generate_general_template()
+
+        # normalize filters: support comma-separated values and repeated flags
+        def expand_multi(values):
+            expanded = []
+            for v in values:
+                expanded.extend([p.strip() for p in v.split(',') if p.strip()])
+            return set(expanded)
+
+        only_set = expand_multi(only)
+        except_set = expand_multi(except_)
+
+        if only_set:
+            templates = {k: v for k, v in templates.items() if k in only_set}
+        if except_set:
+            templates = {k: v for k, v in templates.items() if k not in except_set}
+
         _write_templates_dir(out_dir, templates)
-        click.echo(f"Wrote templates to {out_dir}")
+        click.echo(f"Wrote templates to {out_dir} for tables: {', '.join(sorted(templates.keys()))}")
 
     @app.cli.command("load-templates")
-    @click.argument('in_dir')
+    @click.option('--in-dir', default='data', show_default=True, help='Input directory for templates')
     @click.option('--reset-after', is_flag=True, default=True, help='Reset templates back to blank after load')
     @click.option('--only', multiple=True, help='Only load specified tables (can repeat)')
     @click.option('--except', 'except_', multiple=True, help='Skip specified tables (can repeat)')
     @click.option('--dry-run', is_flag=True, default=False, help='Validate and show counts, but do not commit')
-    def load_templates(in_dir, reset_after, only, except_, dry_run):
+    @click.option('--keep', is_flag=True, default=False, help='Keep input files as-is after load (do not reset)')
+    @click.option('--archive-dir', default='data/_history', show_default=True, help='Directory to store load archives')
+    def load_templates(in_dir, reset_after, only, except_, dry_run, keep, archive_dir):
         """Load JSON data from IN_DIR into tables; optionally reset templates afterwards.
 
         --only and --except take table names (matching __tablename__).
         FK-aware order is applied automatically based on model metadata.
         """
         from sqlalchemy.exc import IntegrityError
+        import shutil
+        import json as _json
+        from datetime import datetime as _dt
         from sqlalchemy import inspect as sa_inspect
         model_files = _model_files()
 
@@ -210,9 +233,29 @@ def create_app():
 
                 count = 0
                 model_columns = {c.name for c in model.__table__.columns}
+                from datetime import datetime as _dt, date as _date
+                def coerce_value(colname, value):
+                    if value in (None, ""):
+                        return None
+                    # rudimentary date coercion for columns likely to be Date/DateTime
+                    if colname.endswith('date') or colname in ('entry_date', 'exit_date', 'created_at', 'updated_at'):
+                        if isinstance(value, str):
+                            for fmt in ('%Y-%m-%d', '%Y/%m/%d', '%d-%m-%Y'):
+                                try:
+                                    return _dt.strptime(value, fmt).date()
+                                except ValueError:
+                                    continue
+                        if isinstance(value, (int, float)):
+                            try:
+                                return _dt.fromtimestamp(value).date()
+                            except Exception:
+                                return None
+                    return value
+
                 for row in rows:
                     try:
-                        obj = model(**{k: v for k, v in row.items() if k in model_columns})
+                        payload = {k: coerce_value(k, v) for k, v in row.items() if k in model_columns}
+                        obj = model(**payload)
                         db.session.add(obj)
                         count += 1
                     except TypeError:
@@ -229,7 +272,8 @@ def create_app():
                         count = 0
                         for row in rows:
                             try:
-                                obj = model(**{k: v for k, v in row.items() if k in model_columns})
+                                payload = {k: coerce_value(k, v) for k, v in row.items() if k in model_columns}
+                                obj = model(**payload)
                                 db.session.merge(obj)
                                 count += 1
                             except TypeError:
@@ -243,11 +287,33 @@ def create_app():
 
         click.echo(f"Loaded data: {loaded_counts}")
 
-        if reset_after:
+        # Archive input snapshot and manifest (always archive for history)
+        ts = _dt.utcnow().strftime('%Y%m%d_%H%M%S')
+        archive_subdir = os.path.join(archive_dir, ts)
+        os.makedirs(archive_subdir, exist_ok=True)
+        # Copy present files
+        for _model, filename in load_order:
+            src = os.path.join(in_dir, filename)
+            if os.path.exists(src):
+                shutil.copy2(src, os.path.join(archive_subdir, filename))
+        # Write manifest
+        with open(os.path.join(archive_subdir, 'manifest.json'), 'w', encoding='utf-8') as mf:
+            _json.dump({
+                'timestamp_utc': ts,
+                'in_dir': in_dir,
+                'loaded_counts': loaded_counts,
+                'only': list(only) if only else [],
+                'except': list(except_) if except_ else [],
+                'dry_run': bool(dry_run),
+            }, mf, ensure_ascii=False, indent=2)
+
+        if reset_after and not keep:
             # Regenerate blank templates to neutral state
             from .models import generate_general_template
             templates = generate_general_template()
             _write_templates_dir(in_dir, templates)
             click.echo("Templates reset to neutral state.")
+        elif keep:
+            click.echo("Templates kept as-is (no reset). Archive created.")
 
     return app

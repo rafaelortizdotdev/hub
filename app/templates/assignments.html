@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Store Assignments - HONOR Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .dual-list-container {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 1rem;
+            align-items: stretch;
+        }
+        .list-box {
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            height: 400px;
+            overflow-y: auto;
+        }
+        .list-item {
+            padding: 0.75rem;
+            border-bottom: 1px solid #f3f4f6;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .list-item:hover {
+            background-color: #f9fafb;
+        }
+        .list-item.selected {
+            background-color: #dbeafe;
+        }
+        .arrow-buttons {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .search-box {
+            position: sticky;
+            top: 0;
+            background: white;
+            padding: 0.5rem;
+            border-bottom: 1px solid #e5e7eb;
+            z-index: 10;
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.125rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .badge-pending {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+        .badge-active {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+        .badge-approved {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <h1 class="text-xl font-semibold text-gray-900">HONOR Hub - Store Assignments</h1>
+                <a href="{{ url_for('dashboard.dashboard') }}" class="text-blue-600 hover:text-blue-800">← Back to Dashboard</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Manage Store Assignments</h2>
+            
+            <!-- Store Selector -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Select Store</label>
+                <select id="storeSelect" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
+                    <option value="">Choose a store...</option>
+                    <optgroup label="Active Stores">
+                        {% for store in active_stores %}
+                        <option value="store:{{ store.id }}" data-store-type="store" data-store-id="{{ store.id }}">
+                            {{ store.store_name }} - {{ store.city.name if store.city else 'N/A' }}
+                        </option>
+                        {% endfor %}
+                    </optgroup>
+                    <optgroup label="Pending Stores">
+                        {% for store in pending_stores %}
+                        <option value="pending_store:{{ store.id }}" data-store-type="pending_store" data-store-id="{{ store.id }}">
+                            {{ store.store_name }} - {{ store.city.name if store.city else 'N/A' }} (Pending)
+                        </option>
+                        {% endfor %}
+                    </optgroup>
+                </select>
+            </div>
+
+            <!-- Role Tabs -->
+            <div class="mb-6 border-b border-gray-200">
+                <div class="flex space-x-4">
+                    <button id="tabSalesmen" class="role-tab px-4 py-2 font-medium border-b-2 border-blue-500 text-blue-600" data-role="SALESMAN">
+                        Salesmen
+                    </button>
+                    <button id="tabPromoters" class="role-tab px-4 py-2 font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700" data-role="PROMOTER">
+                        Promoters
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dual-List Interface -->
+            <div id="assignmentInterface" class="hidden">
+                <div class="dual-list-container">
+                    <!-- Available Staff -->
+                    <div class="flex flex-col">
+                        <h3 class="text-lg font-semibold mb-2 text-gray-700">Available Staff</h3>
+                        <div class="list-box bg-white">
+                            <div class="search-box">
+                                <input type="text" id="searchAvailable" placeholder="Search..." 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                            </div>
+                            <div id="availableList" class="p-2">
+                                <!-- Populated by JavaScript -->
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">
+                            Click to select, use arrows to move
+                        </p>
+                    </div>
+
+                    <!-- Arrow Buttons -->
+                    <div class="arrow-buttons">
+                        <button id="btnMoveRight" class="px-4 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed" disabled>
+                            →
+                        </button>
+                        <button id="btnMoveLeft" class="px-4 py-3 bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:bg-gray-300 disabled:cursor-not-allowed" disabled>
+                            ←
+                        </button>
+                    </div>
+
+                    <!-- Assigned Staff -->
+                    <div class="flex flex-col">
+                        <h3 class="text-lg font-semibold mb-2 text-gray-700">Assigned to Store</h3>
+                        <div class="list-box bg-white">
+                            <div class="search-box">
+                                <input type="text" id="searchAssigned" placeholder="Search..." 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                            </div>
+                            <div id="assignedList" class="p-2">
+                                <!-- Populated by JavaScript -->
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">
+                            Only showing APPROVED assignments
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="mt-6 flex items-center justify-between">
+                    <div class="text-sm text-gray-600">
+                        <span id="changesSummary">No changes</span>
+                    </div>
+                    <div class="space-x-3">
+                        <button id="btnCancel" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50">
+                            Cancel
+                        </button>
+                        <button id="btnSubmit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed" disabled>
+                            Submit for Approval
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Info Banner -->
+                <div class="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+                    <p class="text-sm text-yellow-800">
+                        <strong>⚠️ Note:</strong> All assignment changes require administrator approval before becoming active.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="text-center py-12">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                </svg>
+                <h3 class="mt-2 text-sm font-medium text-gray-900">Select a store to manage assignments</h3>
+                <p class="mt-1 text-sm text-gray-500">Choose a store from the dropdown above</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Assignment Manager
+        class AssignmentManager {
+            constructor() {
+                this.storeType = null;
+                this.storeId = null;
+                this.role = 'SALESMAN';
+                this.availableStaff = [];
+                this.assignedStaff = [];
+                this.selectedAvailable = new Set();
+                this.selectedAssigned = new Set();
+                this.pendingChanges = {
+                    toAssign: [],
+                    toUnassign: []
+                };
+                this.initializeEventListeners();
+            }
+
+            initializeEventListeners() {
+                // Store selection
+                document.getElementById('storeSelect').addEventListener('change', (e) => {
+                    if (e.target.value) {
+                        const option = e.target.options[e.target.selectedIndex];
+                        this.storeType = option.dataset.storeType;
+                        this.storeId = option.dataset.storeId;
+                        this.loadData();
+                    } else {
+                        this.hideInterface();
+                    }
+                });
+
+                // Role tabs
+                document.querySelectorAll('.role-tab').forEach(tab => {
+                    tab.addEventListener('click', (e) => {
+                        const newRole = e.target.dataset.role;
+                        if (this.role !== newRole && this.storeId) {
+                            this.switchRole(newRole);
+                        }
+                    });
+                });
+
+                // Arrow buttons
+                document.getElementById('btnMoveRight').addEventListener('click', () => this.moveToAssigned());
+                document.getElementById('btnMoveLeft').addEventListener('click', () => this.moveToAvailable());
+
+                // Action buttons
+                document.getElementById('btnCancel').addEventListener('click', () => this.cancelChanges());
+                document.getElementById('btnSubmit').addEventListener('click', () => this.submitChanges());
+
+                // Search
+                document.getElementById('searchAvailable').addEventListener('input', (e) => this.filterList('available', e.target.value));
+                document.getElementById('searchAssigned').addEventListener('input', (e) => this.filterList('assigned', e.target.value));
+            }
+
+            switchRole(newRole) {
+                // Update active tab
+                document.querySelectorAll('.role-tab').forEach(tab => {
+                    if (tab.dataset.role === newRole) {
+                        tab.classList.add('border-blue-500', 'text-blue-600');
+                        tab.classList.remove('border-transparent', 'text-gray-500');
+                    } else {
+                        tab.classList.remove('border-blue-500', 'text-blue-600');
+                        tab.classList.add('border-transparent', 'text-gray-500');
+                    }
+                });
+                
+                this.role = newRole;
+                this.loadData();
+            }
+
+            async loadData() {
+                try {
+                    // Show loading
+                    this.showInterface();
+                    document.getElementById('availableList').innerHTML = '<div class="text-center py-4 text-gray-500">Loading...</div>';
+                    document.getElementById('assignedList').innerHTML = '<div class="text-center py-4 text-gray-500">Loading...</div>';
+
+                    // Load assigned staff
+                    const assignedRes = await fetch(`/api/assignments/store/${this.storeType}/${this.storeId}?role=${this.role}`);
+                    const assignedData = await assignedRes.json();
+                    this.assignedStaff = assignedData.assignments || [];
+
+                    // Load available staff
+                    const availableRes = await fetch(`/api/assignments/available-staff?store_type=${this.storeType}&store_id=${this.storeId}&role=${this.role}`);
+                    const availableData = await availableRes.json();
+                    this.availableStaff = availableData.available || [];
+
+                    // Reset selections and changes
+                    this.selectedAvailable.clear();
+                    this.selectedAssigned.clear();
+                    this.pendingChanges = { toAssign: [], toUnassign: [] };
+
+                    this.render();
+                } catch (error) {
+                    console.error('Error loading data:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Failed to load assignments'
+                    });
+                }
+            }
+
+            render() {
+                this.renderAvailableList();
+                this.renderAssignedList();
+                this.updateButtons();
+                this.updateChangesSummary();
+            }
+
+            renderAvailableList() {
+                const container = document.getElementById('availableList');
+                if (this.availableStaff.length === 0) {
+                    container.innerHTML = '<div class="text-center py-4 text-gray-500">No available staff</div>';
+                    return;
+                }
+
+                container.innerHTML = this.availableStaff.map(staff => `
+                    <div class="list-item ${this.selectedAvailable.has(staff.id) ? 'selected' : ''}" 
+                         data-id="${staff.id}"
+                         onclick="assignmentManager.toggleSelection('available', '${staff.id}')">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="font-medium text-gray-900">${staff.name}</div>
+                                <div class="text-sm text-gray-500">${staff.contact_number || 'No phone'}</div>
+                            </div>
+                            <span class="badge ${staff.type === 'user' ? 'badge-active' : 'badge-pending'}">
+                                ${staff.type === 'user' ? 'Active' : 'Pending'}
+                            </span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            renderAssignedList() {
+                const container = document.getElementById('assignedList');
+                if (this.assignedStaff.length === 0) {
+                    container.innerHTML = '<div class="text-center py-4 text-gray-500">No assigned staff</div>';
+                    return;
+                }
+
+                container.innerHTML = this.assignedStaff.map(assignment => `
+                    <div class="list-item ${this.selectedAssigned.has(assignment.id) ? 'selected' : ''}" 
+                         data-id="${assignment.id}"
+                         onclick="assignmentManager.toggleSelection('assigned', ${assignment.id})">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="font-medium text-gray-900">${assignment.staff_name}</div>
+                                <div class="text-sm text-gray-500">Assigned: ${new Date(assignment.assigned_date).toLocaleDateString()}</div>
+                            </div>
+                            <span class="badge badge-approved">
+                                ${assignment.status}
+                            </span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            toggleSelection(list, id) {
+                const idKey = list === 'available' ? String(id) : Number(id);
+                const selectedSet = list === 'available' ? this.selectedAvailable : this.selectedAssigned;
+                
+                if (selectedSet.has(idKey)) {
+                    selectedSet.delete(idKey);
+                } else {
+                    selectedSet.add(idKey);
+                }
+                
+                this.render();
+            }
+
+            moveToAssigned() {
+                this.selectedAvailable.forEach(staffId => {
+                    const staff = this.availableStaff.find(s => s.id === staffId);
+                    if (staff) {
+                        this.pendingChanges.toAssign.push({
+                            staff_type: staff.type,
+                            staff_id: staff.original_id
+                        });
+                        this.availableStaff = this.availableStaff.filter(s => s.id !== staffId);
+                    }
+                });
+                
+                this.selectedAvailable.clear();
+                this.render();
+            }
+
+            moveToAvailable() {
+                this.selectedAssigned.forEach(assignmentId => {
+                    this.pendingChanges.toUnassign.push(assignmentId);
+                    this.assignedStaff = this.assignedStaff.filter(a => a.id !== assignmentId);
+                });
+                
+                this.selectedAssigned.clear();
+                this.render();
+            }
+
+            updateButtons() {
+                document.getElementById('btnMoveRight').disabled = this.selectedAvailable.size === 0;
+                document.getElementById('btnMoveLeft').disabled = this.selectedAssigned.size === 0;
+                
+                const hasChanges = this.pendingChanges.toAssign.length > 0 || this.pendingChanges.toUnassign.length > 0;
+                document.getElementById('btnSubmit').disabled = !hasChanges;
+            }
+
+            updateChangesSummary() {
+                const toAssign = this.pendingChanges.toAssign.length;
+                const toUnassign = this.pendingChanges.toUnassign.length;
+                
+                let summary = 'No changes';
+                if (toAssign > 0 || toUnassign > 0) {
+                    const parts = [];
+                    if (toAssign > 0) parts.push(`${toAssign} to assign`);
+                    if (toUnassign > 0) parts.push(`${toUnassign} to unassign`);
+                    summary = parts.join(', ');
+                }
+                
+                document.getElementById('changesSummary').textContent = summary;
+            }
+
+            cancelChanges() {
+                if (this.pendingChanges.toAssign.length > 0 || this.pendingChanges.toUnassign.length > 0) {
+                    Swal.fire({
+                        title: 'Discard changes?',
+                        text: 'All pending changes will be lost.',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Discard',
+                        cancelButtonText: 'Keep editing'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            this.loadData();
+                        }
+                    });
+                } else {
+                    this.loadData();
+                }
+            }
+
+            async submitChanges() {
+                try {
+                    const response = await fetch('/api/assignments/bulk', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            store_type: this.storeType,
+                            store_id: this.storeId,
+                            role: this.role,
+                            assign: this.pendingChanges.toAssign,
+                            unassign: this.pendingChanges.toUnassign
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Changes Submitted!',
+                            text: 'Assignment changes have been submitted for admin approval.',
+                            confirmButtonColor: '#2563eb'
+                        }).then(() => {
+                            this.loadData();
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: result.error || 'Failed to submit changes'
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error submitting changes:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Failed to submit changes'
+                    });
+                }
+            }
+
+            filterList(type, query) {
+                const container = document.getElementById(type === 'available' ? 'availableList' : 'assignedList');
+                const items = container.querySelectorAll('.list-item');
+                const lowerQuery = query.toLowerCase();
+
+                items.forEach(item => {
+                    const text = item.textContent.toLowerCase();
+                    item.style.display = text.includes(lowerQuery) ? 'block' : 'none';
+                });
+            }
+
+            showInterface() {
+                document.getElementById('assignmentInterface').classList.remove('hidden');
+                document.getElementById('emptyState').classList.add('hidden');
+            }
+
+            hideInterface() {
+                document.getElementById('assignmentInterface').classList.add('hidden');
+                document.getElementById('emptyState').classList.remove('hidden');
+            }
+        }
+
+        // Initialize
+        const assignmentManager = new AssignmentManager();
+    </script>
+</body>
+</html>
+
