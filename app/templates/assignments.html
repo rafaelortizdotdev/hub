@@ -349,9 +349,14 @@
             renderAssignedList() {
                 const container = document.getElementById('assignedList');
                 
-                // Combine existing assignments and pending assignments
+                // Combine existing assignments (from DB) and unsaved pending changes (local only)
                 const allAssignments = [
-                    ...this.assignedStaff.map(a => ({...a, isPendingChange: false})),
+                    ...this.assignedStaff.map(a => ({
+                        ...a, 
+                        isPendingChange: false,
+                        isFromDB: true  // This came from the database
+                    })),
+                    // Only include local pending changes that haven't been submitted yet
                     ...this.pendingChanges.toAssign.map(pending => {
                         // Look up staff from cache
                         const cacheKey = `${pending.staff_type}-${pending.staff_id}`;
@@ -363,6 +368,7 @@
                             assigned_date: new Date().toISOString(),
                             status: 'PENDING',
                             isPendingChange: true,
+                            isFromDB: false,  // This is only local, not yet submitted
                             pendingStaffId: pending.staff_id,
                             pendingStaffType: pending.staff_type
                         } : null;
@@ -378,21 +384,43 @@
                     const badgeClass = assignment.status === 'PENDING' ? 'badge-pending' : 'badge-approved';
                     const isMarkedForRemoval = !assignment.isPendingChange && this.pendingChanges.toUnassign.includes(assignment.id);
                     
+                    // Determine the status text and description
+                    let statusText = assignment.status;
+                    let dateText = '';
+                    let removalBadge = '';
+                    
+                    if (isMarkedForRemoval && assignment.status === 'PENDING') {
+                        // Removing a PENDING assignment = cancelling the request
+                        removalBadge = '<span class="badge bg-orange-100 text-orange-800">To Cancel</span>';
+                    } else if (isMarkedForRemoval) {
+                        // Removing an APPROVED assignment = will need admin approval
+                        removalBadge = '<span class="badge bg-red-100 text-red-800">To Remove</span>';
+                    }
+                    
+                    if (assignment.isFromDB && assignment.status === 'PENDING') {
+                        statusText = 'PENDING';
+                        dateText = 'Awaiting admin approval';
+                    } else if (assignment.isPendingChange) {
+                        dateText = 'To be submitted';
+                    } else {
+                        dateText = `Assigned: ${new Date(assignment.assigned_date).toLocaleDateString()}`;
+                    }
+                    
                     return `
                     <div class="list-item ${this.selectedAssigned.has(assignment.id) ? 'selected' : ''} ${isMarkedForRemoval ? 'opacity-50' : ''}" 
                          data-id="${assignment.id}"
                          onclick="assignmentManager.toggleSelection('assigned', '${assignment.id}')">
                         <div class="flex items-center justify-between">
                             <div class="flex-1">
-                                <div class="font-medium text-gray-900">${assignment.staff_name}</div>
+                                <div class="font-medium text-gray-900">${assignment.staff_name || 'Unknown'}</div>
                                 <div class="text-sm text-gray-500">
-                                    ${assignment.isPendingChange ? 'To be assigned' : `Assigned: ${new Date(assignment.assigned_date).toLocaleDateString()}`}
+                                    ${dateText}
                                 </div>
                             </div>
                             <div class="flex items-center gap-2">
-                                ${isMarkedForRemoval ? '<span class="badge bg-red-100 text-red-800">To Remove</span>' : ''}
+                                ${removalBadge}
                                 <span class="badge ${badgeClass}">
-                                    ${assignment.status}
+                                    ${statusText}
                                 </span>
                             </div>
                         </div>
@@ -432,7 +460,10 @@
 
             moveToAvailable() {
                 this.selectedAssigned.forEach(assignmentId => {
-                    // Check if it's a pending assignment (starts with 'pending-')
+                    // Find the assignment to determine if it's from DB or local
+                    const assignment = this.assignedStaff.find(a => a.id === assignmentId);
+                    
+                    // Check if it's a local pending assignment (starts with 'pending-')
                     if (String(assignmentId).startsWith('pending-')) {
                         // Extract staff_type and staff_id from the ID format: "pending-{type}-{id}"
                         const parts = String(assignmentId).split('-');
@@ -440,7 +471,7 @@
                             const staffType = parts[1];
                             const staffId = parts.slice(2).join('-'); // Handle IDs that might contain dashes
                             
-                            // Remove from pending assignments
+                            // Remove from local pending assignments
                             this.pendingChanges.toAssign = this.pendingChanges.toAssign.filter(
                                 p => !(p.staff_type === staffType && String(p.staff_id) === staffId)
                             );
@@ -452,8 +483,14 @@
                                 this.availableStaff.push(staff);
                             }
                         }
+                    } else if (assignment && assignment.status === 'PENDING') {
+                        // It's a PENDING assignment from the database
+                        // Mark it for removal (will cancel the pending request)
+                        if (!this.pendingChanges.toUnassign.includes(assignmentId)) {
+                            this.pendingChanges.toUnassign.push(assignmentId);
+                        }
                     } else {
-                        // Mark existing assignment for removal
+                        // It's an APPROVED assignment - mark for removal
                         if (!this.pendingChanges.toUnassign.includes(assignmentId)) {
                             this.pendingChanges.toUnassign.push(assignmentId);
                         }
@@ -476,11 +513,25 @@
                 const toAssign = this.pendingChanges.toAssign.length;
                 const toUnassign = this.pendingChanges.toUnassign.length;
                 
+                // Count how many of the unassignments are PENDING (will be cancelled vs removed)
+                let pendingToCancel = 0;
+                let approvedToRemove = 0;
+                
+                this.pendingChanges.toUnassign.forEach(id => {
+                    const assignment = this.assignedStaff.find(a => a.id === id);
+                    if (assignment && assignment.status === 'PENDING') {
+                        pendingToCancel++;
+                    } else if (assignment && assignment.status === 'APPROVED') {
+                        approvedToRemove++;
+                    }
+                });
+                
                 let summary = 'No changes';
                 if (toAssign > 0 || toUnassign > 0) {
                     const parts = [];
                     if (toAssign > 0) parts.push(`${toAssign} to assign`);
-                    if (toUnassign > 0) parts.push(`${toUnassign} to unassign`);
+                    if (pendingToCancel > 0) parts.push(`${pendingToCancel} to cancel`);
+                    if (approvedToRemove > 0) parts.push(`${approvedToRemove} to remove`);
                     summary = parts.join(', ');
                 }
                 
@@ -530,10 +581,38 @@
                     console.log('Server response:', result);
 
                     if (response.ok) {
+                        // Build contextual message
+                        let message = '';
+                        const parts = [];
+                        
+                        if (result.created > 0) {
+                            parts.push(`${result.created} assignment(s) created`);
+                        }
+                        if (result.removed > 0) {
+                            parts.push(`${result.removed} assignment(s) cancelled/removed`);
+                        }
+                        
+                        if (parts.length > 0) {
+                            message = parts.join(' and ') + '.';
+                        } else {
+                            message = 'Changes processed successfully.';
+                        }
+                        
+                        // Check if any changes need approval
+                        const needsApproval = result.created > 0 || 
+                            (this.pendingChanges.toUnassign.some(id => {
+                                const assignment = this.assignedStaff.find(a => a.id === id);
+                                return assignment && assignment.status === 'APPROVED';
+                            }));
+                        
+                        if (needsApproval) {
+                            message += '\n\nNew assignments and removals require admin approval.';
+                        }
+                        
                         Swal.fire({
                             icon: 'success',
                             title: 'Changes Submitted!',
-                            text: 'Assignment changes have been submitted for admin approval.',
+                            text: message,
                             confirmButtonColor: '#2563eb'
                         }).then(() => {
                             this.loadData();

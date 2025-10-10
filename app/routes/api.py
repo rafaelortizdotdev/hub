@@ -91,26 +91,37 @@ class AssignmentService:
     
     @staticmethod
     def get_store_assignments(store_type, store_id, role, status='APPROVED'):
-        """Get all assignments for a store by role and status"""
-        return db.session.query(StoreAssignment).filter_by(
+        """Get all assignments for a store by role and status
+        
+        If status is 'ALL', returns both APPROVED and PENDING assignments
+        """
+        query = db.session.query(StoreAssignment).filter_by(
             store_type=store_type,
             store_id=str(store_id),
-            role=role,
-            status=status
-        ).all()
+            role=role
+        )
+        
+        if status and status != 'ALL':
+            query = query.filter_by(status=status)
+        elif status == 'ALL':
+            # Get both APPROVED and PENDING for supervisor view
+            query = query.filter(StoreAssignment.status.in_(['APPROVED', 'PENDING']))
+        
+        return query.all()
     
     @staticmethod
     def get_available_staff(store_type, store_id, role, supervisor_id):
         """Get staff NOT currently assigned to this store"""
-        # Get all assigned staff IDs for this store and role
+        # Get all assigned staff IDs for this store and role (APPROVED and PENDING)
         assigned = db.session.query(
             StoreAssignment.staff_type,
             StoreAssignment.staff_id
         ).filter_by(
             store_type=store_type,
             store_id=str(store_id),
-            role=role,
-            status='APPROVED'
+            role=role
+        ).filter(
+            StoreAssignment.status.in_(['APPROVED', 'PENDING'])
         ).all()
         
         assigned_pairs = [(a.staff_type, a.staff_id) for a in assigned]
@@ -273,9 +284,37 @@ class AssignmentService:
         if not assignment:
             return None
         
+        # Get staff name first
+        staff_name = 'Unknown'
+        if assignment.staff_type == 'user':
+            staff = db.session.query(User).filter_by(id=assignment.staff_id).first()
+            if staff:
+                staff_name = staff.name
+                details_staff = {
+                    'type': 'user',
+                    'id': staff.id,
+                    'name': staff.name,
+                    'status': staff.status
+                }
+            else:
+                details_staff = None
+        else:
+            staff = db.session.query(PendingClients).filter_by(id=int(assignment.staff_id)).first()
+            if staff:
+                staff_name = staff.name
+                details_staff = {
+                    'type': 'pending_client',
+                    'id': staff.id,
+                    'name': staff.name,
+                    'status': staff.status
+                }
+            else:
+                details_staff = None
+        
         # Build details dictionary
         details = {
             'id': assignment.id,
+            'staff_name': staff_name,  # Add at top level for easy access
             'role': assignment.role,
             'status': assignment.status,
             'assigned_date': assignment.assigned_date.isoformat() if assignment.assigned_date else None,
@@ -284,25 +323,9 @@ class AssignmentService:
             'rejection_reason': assignment.rejection_reason
         }
         
-        # Get staff details
-        if assignment.staff_type == 'user':
-            staff = db.session.query(User).filter_by(id=assignment.staff_id).first()
-            if staff:
-                details['staff'] = {
-                    'type': 'user',
-                    'id': staff.id,
-                    'name': staff.name,
-                    'status': staff.status
-                }
-        else:
-            staff = db.session.query(PendingClients).filter_by(id=int(assignment.staff_id)).first()
-            if staff:
-                details['staff'] = {
-                    'type': 'pending_client',
-                    'id': staff.id,
-                    'name': staff.name,
-                    'status': staff.status
-                }
+        # Add nested staff object
+        if details_staff:
+            details['staff'] = details_staff
         
         # Get store details
         if assignment.store_type == 'store':
@@ -653,7 +676,8 @@ def get_store_assignments(store_type, store_id):
     
     try:
         role = request.args.get('role', 'SALESMAN')
-        status = request.args.get('status', 'APPROVED')
+        # Default to 'ALL' to show both APPROVED and PENDING assignments
+        status = request.args.get('status', 'ALL')
         
         assignments = AssignmentService.get_store_assignments(store_type, store_id, role, status)
         
