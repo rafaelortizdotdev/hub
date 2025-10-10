@@ -64,6 +64,22 @@
             background-color: #dbeafe;
             color: #1e40af;
         }
+        /* Visual feedback for pending changes */
+        .pending-change {
+            background: linear-gradient(to right, #f3f4f6 0%, #e5e7eb 100%);
+            border-left: 4px solid #3b82f6;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .pending-cancellation {
+            background: linear-gradient(to right, #fffbeb 0%, #fef3c7 100%);
+            border-left: 4px solid #f59e0b;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .pending-removal {
+            background: linear-gradient(to right, #fef2f2 0%, #fee2e2 100%);
+            border-left: 4px solid #ef4444;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
@@ -286,11 +302,26 @@
                     const availableData = await availableRes.json();
                     this.availableStaff = availableData.available || [];
 
-                    // Cache staff data for later reference
+                    // Cache staff data for later reference (from available staff)
                     this.staffCache = {};
                     this.availableStaff.forEach(staff => {
                         const key = `${staff.type}-${staff.original_id}`;
                         this.staffCache[key] = staff;
+                    });
+                    
+                    // Also cache staff from assigned list (they might not be in available)
+                    this.assignedStaff.forEach(assignment => {
+                        const key = `${assignment.staff_type}-${assignment.staff_id}`;
+                        if (!this.staffCache[key] && assignment.staff_name) {
+                            // Create a minimal staff object for caching
+                            this.staffCache[key] = {
+                                id: `${assignment.staff_type}-${assignment.staff_id}`,
+                                type: assignment.staff_type,
+                                original_id: assignment.staff_id,
+                                name: assignment.staff_name,
+                                stores_count: 0  // We don't know this for assigned staff
+                            };
+                        }
                     });
 
                     // Reset selections and changes
@@ -318,6 +349,7 @@
 
             renderAvailableList() {
                 const container = document.getElementById('availableList');
+                
                 if (this.availableStaff.length === 0) {
                     container.innerHTML = '<div class="text-center py-4 text-gray-500">No available staff</div>';
                     return;
@@ -329,14 +361,47 @@
                         ? `${staff.stores_count} store${staff.stores_count > 1 ? 's' : ''}`
                         : 'No stores';
                     
+                    // Check if this staff is marked for removal (will show in Available with visual feedback)
+                    const isMarkedForRemoval = this.pendingChanges.toUnassign.some(assignmentId => {
+                        // Find the assignment being removed
+                        const assignment = this.assignedStaff.find(a => a.id == assignmentId);
+                        if (!assignment) return false;
+                        
+                        // Check if it matches this staff member using original_id
+                        const assignmentStaffKey = `${assignment.staff_type}-${assignment.staff_id}`;
+                        const staffKey = `${staff.type}-${staff.original_id}`;
+                        return assignmentStaffKey === staffKey;
+                    });
+                    
+                    // Determine the visual feedback class
+                    let pendingClass = '';
+                    let pendingText = '';
+                    if (isMarkedForRemoval) {
+                        // Find the assignment to check its status
+                        const assignment = this.assignedStaff.find(a => {
+                            const assignmentStaffKey = `${a.staff_type}-${a.staff_id}`;
+                            const staffKey = `${staff.type}-${staff.original_id}`;
+                            return assignmentStaffKey === staffKey && this.pendingChanges.toUnassign.includes(a.id);
+                        });
+                        
+                        if (assignment && assignment.status === 'PENDING') {
+                            pendingClass = 'pending-cancellation';
+                            pendingText = '<span class="text-xs text-orange-600 font-medium">Cancelling assignment</span>';
+                        } else if (assignment) {
+                            pendingClass = 'pending-removal';
+                            pendingText = '<span class="text-xs text-red-600 font-medium">Removing assignment</span>';
+                        }
+                    }
+                    
                     return `
-                    <div class="list-item ${this.selectedAvailable.has(staff.id) ? 'selected' : ''}" 
+                    <div class="list-item ${pendingClass} ${this.selectedAvailable.has(staff.id) ? 'selected' : ''}" 
                          data-id="${staff.id}"
                          onclick="assignmentManager.toggleSelection('available', '${staff.id}')">
                         <div class="flex items-center justify-between">
                             <div class="flex-1">
                                 <div class="font-medium text-gray-900">${staff.name}</div>
                                 <div class="text-sm text-gray-500">${storeInfo}</div>
+                                ${pendingText}
                             </div>
                             <span class="badge ${staff.type === 'user' ? 'badge-active' : 'badge-pending'}">
                                 ${staff.type === 'user' ? 'Active' : 'Pending'}
@@ -351,11 +416,17 @@
                 
                 // Combine existing assignments (from DB) and unsaved pending changes (local only)
                 const allAssignments = [
-                    ...this.assignedStaff.map(a => ({
-                        ...a, 
-                        isPendingChange: false,
-                        isFromDB: true  // This came from the database
-                    })),
+                    // Filter out assignments marked for removal - they'll show in available list instead
+                    ...this.assignedStaff
+                        .filter(a => {
+                            // Use loose equality to handle string/number mismatch
+                            return !this.pendingChanges.toUnassign.some(id => id == a.id);
+                        })
+                        .map(a => ({
+                            ...a, 
+                            isPendingChange: false,
+                            isFromDB: true  // This came from the database
+                        })),
                     // Only include local pending changes that haven't been submitted yet
                     ...this.pendingChanges.toAssign.map(pending => {
                         // Look up staff from cache
@@ -382,20 +453,17 @@
 
                 container.innerHTML = allAssignments.map(assignment => {
                     const badgeClass = assignment.status === 'PENDING' ? 'badge-pending' : 'badge-approved';
-                    const isMarkedForRemoval = !assignment.isPendingChange && this.pendingChanges.toUnassign.includes(assignment.id);
+                    
+                    // Determine visual feedback class
+                    let pendingClass = '';
+                    if (assignment.isPendingChange) {
+                        // New assignment not yet submitted
+                        pendingClass = 'pending-change';
+                    }
                     
                     // Determine the status text and description
                     let statusText = assignment.status;
                     let dateText = '';
-                    let removalBadge = '';
-                    
-                    if (isMarkedForRemoval && assignment.status === 'PENDING') {
-                        // Removing a PENDING assignment = cancelling the request
-                        removalBadge = '<span class="badge bg-orange-100 text-orange-800">To Cancel</span>';
-                    } else if (isMarkedForRemoval) {
-                        // Removing an APPROVED assignment = will need admin approval
-                        removalBadge = '<span class="badge bg-red-100 text-red-800">To Remove</span>';
-                    }
                     
                     if (assignment.isFromDB && assignment.status === 'PENDING') {
                         statusText = 'PENDING';
@@ -407,7 +475,7 @@
                     }
                     
                     return `
-                    <div class="list-item ${this.selectedAssigned.has(assignment.id) ? 'selected' : ''} ${isMarkedForRemoval ? 'opacity-50' : ''}" 
+                    <div class="list-item ${pendingClass} ${this.selectedAssigned.has(assignment.id) ? 'selected' : ''}" 
                          data-id="${assignment.id}"
                          onclick="assignmentManager.toggleSelection('assigned', '${assignment.id}')">
                         <div class="flex items-center justify-between">
@@ -417,12 +485,9 @@
                                     ${dateText}
                                 </div>
                             </div>
-                            <div class="flex items-center gap-2">
-                                ${removalBadge}
-                                <span class="badge ${badgeClass}">
-                                    ${statusText}
-                                </span>
-                            </div>
+                            <span class="badge ${badgeClass}">
+                                ${statusText}
+                            </span>
                         </div>
                     </div>
                 `}).join('');
@@ -461,7 +526,7 @@
             moveToAvailable() {
                 this.selectedAssigned.forEach(assignmentId => {
                     // Find the assignment to determine if it's from DB or local
-                    const assignment = this.assignedStaff.find(a => a.id === assignmentId);
+                    const assignment = this.assignedStaff.find(a => a.id == assignmentId);
                     
                     // Check if it's a local pending assignment (starts with 'pending-')
                     if (String(assignmentId).startsWith('pending-')) {
@@ -489,10 +554,24 @@
                         if (!this.pendingChanges.toUnassign.includes(assignmentId)) {
                             this.pendingChanges.toUnassign.push(assignmentId);
                         }
-                    } else {
+                        
+                        // Add back to available list so user can see it
+                        const staffKey = `${assignment.staff_type}-${assignment.staff_id}`;
+                        const staff = this.staffCache[staffKey];
+                        if (staff && !this.availableStaff.find(s => s.id === staff.id)) {
+                            this.availableStaff.push(staff);
+                        }
+                    } else if (assignment && assignment.status === 'APPROVED') {
                         // It's an APPROVED assignment - mark for removal
                         if (!this.pendingChanges.toUnassign.includes(assignmentId)) {
                             this.pendingChanges.toUnassign.push(assignmentId);
+                        }
+                        
+                        // Add back to available list so user can see it
+                        const staffKey = `${assignment.staff_type}-${assignment.staff_id}`;
+                        const staff = this.staffCache[staffKey];
+                        if (staff && !this.availableStaff.find(s => s.id === staff.id)) {
+                            this.availableStaff.push(staff);
                         }
                     }
                 });

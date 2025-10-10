@@ -315,6 +315,8 @@ class AssignmentService:
         details = {
             'id': assignment.id,
             'staff_name': staff_name,  # Add at top level for easy access
+            'staff_type': assignment.staff_type,  # Add for cache lookup
+            'staff_id': assignment.staff_id,  # Add for cache lookup
             'role': assignment.role,
             'status': assignment.status,
             'assigned_date': assignment.assigned_date.isoformat() if assignment.assigned_date else None,

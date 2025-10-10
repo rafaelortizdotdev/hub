@@ -38,6 +38,31 @@ All notable changes, fixes, and improvements to the store assignment management 
 
 ## Recent Fixes
 
+### Fix: Visual Card Movement & Feedback (2025-10-10)
+**Issue:** Assigned staff not visually moving to available list when clicked - cards appeared in BOTH lists
+
+**Root Cause:** 
+- Type mismatch: Assignment IDs stored as strings in `selectedAssigned` but compared with numbers from API
+- String `'8'` !== Number `8` in strict comparison, so filter didn't work
+- Backend wasn't returning `staff_type` and `staff_id` needed for cache lookups
+- Frontend cache wasn't populated with assigned staff data
+
+**Changes:**
+1. **Backend (`api.py`):** Added `staff_type` and `staff_id` to assignment details response
+2. **Frontend (`assignments.html`):** 
+   - Fixed filter to use loose equality (`==`) for string/number comparison
+   - Cache now includes both available AND assigned staff
+   - Cards properly filter out of assigned list when marked for removal
+   - Cards properly restore to available list with visual feedback
+3. **Visual Feedback:** Added gradient backgrounds for pending changes:
+   - **Blue gradient** (`pending-change`): New assignments in Assigned list (not yet submitted)
+   - **Orange gradient** (`pending-cancellation`): Pending assignments in Available list (being cancelled)
+   - **Red gradient** (`pending-removal`): Approved assignments in Available list (being removed)
+
+**Files:** `app/routes/api.py`, `app/templates/assignments.html`
+
+---
+
 ### Fix: Input Validation (2025-10-10)
 **Issue:** Forms accepting invalid values (e.g., "23123123123213" for CI)
 
