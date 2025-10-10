@@ -32,9 +32,12 @@
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">ID Number *</label>
-                        <input type="text" name="client_id" required
+                        <label class="block text-sm font-medium text-gray-700 mb-1">ID Number (CI) *</label>
+                        <input type="text" name="client_id" id="client_id" required
+                               pattern="[0-9]{7,10}" maxlength="10"
+                               placeholder="12345678"
                                class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                        <p class="text-xs text-gray-500 mt-1">7-10 digits</p>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Gender *</label>
@@ -49,8 +52,11 @@
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
-                    <input type="tel" name="contact_number" required placeholder="4121234567"
+                    <input type="tel" name="contact_number" id="contact_number" required 
+                           pattern="[0-9]{10,11}" maxlength="11"
+                           placeholder="4121234567"
                            class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                    <p class="text-xs text-gray-500 mt-1">10-11 digits (no spaces or dashes)</p>
                 </div>
 
                 <div>
@@ -128,8 +134,42 @@
             citySelect.value = '';
         });
         
+        // Input validation
+        const clientIdInput = document.getElementById('client_id');
+        const contactNumberInput = document.getElementById('contact_number');
+        
+        clientIdInput.addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/[^0-9]/g, '');
+        });
+        
+        contactNumberInput.addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/[^0-9]/g, '');
+        });
+        
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
+            
+            // Validate CI
+            const clientId = clientIdInput.value;
+            if (clientId.length < 7 || clientId.length > 10) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Invalid ID Number',
+                    text: 'ID number must be between 7 and 10 digits'
+                });
+                return;
+            }
+            
+            // Validate phone
+            const contactNumber = contactNumberInput.value;
+            if (contactNumber.length < 10 || contactNumber.length > 11) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Invalid Phone Number',
+                    text: 'Phone number must be 10 or 11 digits'
+                });
+                return;
+            }
             
             const formData = new FormData(form);
             const data = Object.fromEntries(formData);

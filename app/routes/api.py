@@ -125,11 +125,20 @@ class AssignmentService:
         
         for user in users:
             if ('user', user.id) not in assigned_pairs:
+                # Count how many stores this user is assigned to
+                stores_count = db.session.query(StoreAssignment).filter_by(
+                    staff_type='user',
+                    staff_id=user.id,
+                    status='APPROVED'
+                ).count()
+                
                 available.append({
                     'type': 'user',
                     'id': user.id,
+                    'original_id': user.id,
                     'name': user.name,
-                    'status': 'ACTIVE'
+                    'status': 'ACTIVE',
+                    'stores_count': stores_count
                 })
         
         # Get pending clients
@@ -140,11 +149,20 @@ class AssignmentService:
         
         for client in pending_clients:
             if ('pending_client', str(client.id)) not in assigned_pairs:
+                # Count how many stores this client is assigned to
+                stores_count = db.session.query(StoreAssignment).filter_by(
+                    staff_type='pending_client',
+                    staff_id=str(client.id),
+                    status='APPROVED'
+                ).count()
+                
                 available.append({
                     'type': 'pending_client',
-                    'id': client.id,
+                    'id': f"pending-{client.id}",
+                    'original_id': client.id,
                     'name': client.name,
-                    'status': 'PENDING'
+                    'status': 'PENDING',
+                    'stores_count': stores_count
                 })
         
         return available
@@ -165,9 +183,16 @@ class AssignmentService:
         created = []
         
         for staff in staff_list:
+            # Support both field name formats: 'type'/'id' or 'staff_type'/'staff_id'
+            staff_type = staff.get('staff_type') or staff.get('type')
+            staff_id = staff.get('staff_id') or staff.get('id')
+            
+            if not staff_type or not staff_id:
+                raise ValueError(f"Invalid staff data: {staff}. Missing staff_type/type or staff_id/id")
+            
             assignment = StoreAssignment(
-                staff_type=staff['type'],
-                staff_id=str(staff['id']),
+                staff_type=staff_type,
+                staff_id=str(staff_id),
                 store_type=store_type,
                 store_id=str(store_id),
                 role=role,
@@ -582,7 +607,7 @@ def create_salesman():
 
     try:
         data = request.get_json()
-        
+
         # Find or create province
         province = ProvinceService.find_by_name(data['province'])
         if not province:
@@ -692,7 +717,23 @@ def bulk_assign():
         unassign_ids = data.get('unassign', [])
         
         if not store_id:
-            return jsonify({'error': 'store_id required'}), 400
+            return jsonify({'error': 'store_id required', 'field': 'store_id'}), 400
+        
+        # Validate assign_list format
+        if assign_list:
+            for idx, staff in enumerate(assign_list):
+                if 'staff_type' not in staff and 'type' not in staff:
+                    return jsonify({
+                        'error': f'Missing staff_type/type in assignment {idx}',
+                        'field': 'staff_type',
+                        'data': staff
+                    }), 400
+                if 'staff_id' not in staff and 'id' not in staff:
+                    return jsonify({
+                        'error': f'Missing staff_id/id in assignment {idx}',
+                        'field': 'staff_id',
+                        'data': staff
+                    }), 400
         
         # Create new assignments
         created = []
@@ -714,9 +755,21 @@ def bulk_assign():
             'created': len(created),
             'removed': removed_count
         })
+    except KeyError as e:
+        db.session.rollback()
+        return jsonify({
+            'error': f'Missing required field: {str(e)}',
+            'field': str(e),
+            'details': 'Check that all staff objects have required fields'
+        }), 400
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        import traceback
+        return jsonify({
+            'error': str(e),
+            'type': type(e).__name__,
+            'traceback': traceback.format_exc()
+        }), 500
 
 
 # Admin Assignment Endpoints
@@ -726,23 +779,99 @@ def get_pending_assignments():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     
-    # TODO: Add admin permission check
+    # Check if user is admin
+    user = db.session.query(User).filter_by(id=session['user_id']).first()
+    if not user or user.user_type_id != 1:  # Assuming 1 is admin
+        return jsonify({'error': 'Admin access required'}), 403
     
     try:
+        status_filter = request.args.get('status', 'PENDING')
         supervisor_id = request.args.get('supervisor_id')
         
-        assignments = AssignmentService.get_pending_assignments(supervisor_id)
+        # Get assignments based on status
+        query = db.session.query(StoreAssignment)
         
+        if status_filter:
+            query = query.filter_by(status=status_filter)
+        
+        if supervisor_id:
+            query = query.filter_by(supervisor_id=supervisor_id)
+        
+        assignments = query.order_by(StoreAssignment.created_at.desc()).all()
+        
+        # Build formatted result for admin panel
         result = []
         for assignment in assignments:
-            details = AssignmentService.get_assignment_details(assignment.id)
-            if details:
-                result.append(details)
+            # Get staff details
+            staff_name = 'Unknown'
+            if assignment.staff_type == 'user':
+                staff = db.session.query(User).filter_by(id=assignment.staff_id).first()
+                if staff:
+                    staff_name = staff.name
+            else:
+                staff = db.session.query(PendingClients).filter_by(id=int(assignment.staff_id)).first()
+                if staff:
+                    staff_name = staff.name
+            
+            # Get store details
+            store_name = 'Unknown'
+            if assignment.store_type == 'store':
+                store = db.session.query(Stores).filter_by(id=assignment.store_id).first()
+                if store:
+                    store_name = store.store_name
+            else:
+                store = db.session.query(PendingStores).filter_by(id=int(assignment.store_id)).first()
+                if store:
+                    store_name = store.store_name
+            
+            # Get supervisor details
+            supervisor = db.session.query(User).filter_by(id=assignment.supervisor_id).first()
+            supervisor_name = supervisor.name if supervisor else 'Unknown'
+            
+            # Get approver details if approved/rejected
+            approver_name = None
+            if assignment.approved_by:
+                approver = db.session.query(User).filter_by(id=assignment.approved_by).first()
+                approver_name = approver.name if approver else 'Unknown'
+            
+            result.append({
+                'id': assignment.id,
+                'staff_name': staff_name,
+                'staff_type': assignment.staff_type,
+                'store_name': store_name,
+                'store_type': assignment.store_type,
+                'role': assignment.role,
+                'status': assignment.status,
+                'supervisor_name': supervisor_name,
+                'assigned_date': assignment.assigned_date.isoformat() if assignment.assigned_date else None,
+                'approved_date': assignment.approved_date.isoformat() if assignment.approved_date else None,
+                'rejection_reason': assignment.rejection_reason,
+                'approver_name': approver_name,
+                'synced_to_erp': assignment.synced_to_erp
+            })
+        
+        # Calculate stats
+        from datetime import datetime, timedelta
+        today = datetime.utcnow().date()
+        
+        pending_count = db.session.query(StoreAssignment).filter_by(status='PENDING').count()
+        approved_today = db.session.query(StoreAssignment).filter(
+            StoreAssignment.status == 'APPROVED',
+            StoreAssignment.approved_date >= datetime.combine(today, datetime.min.time())
+        ).count()
+        rejected_today = db.session.query(StoreAssignment).filter(
+            StoreAssignment.status == 'REJECTED',
+            StoreAssignment.approved_date >= datetime.combine(today, datetime.min.time())
+        ).count()
         
         return jsonify({
             'success': True,
-            'pending_count': len(result),
-            'assignments': result
+            'assignments': result,
+            'stats': {
+                'pending': pending_count,
+                'approved_today': approved_today,
+                'rejected_today': rejected_today
+            }
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -754,7 +883,10 @@ def approve_assignments():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     
-    # TODO: Add admin permission check
+    # Check if user is admin
+    user = db.session.query(User).filter_by(id=session['user_id']).first()
+    if not user or user.user_type_id != 1:  # Assuming 1 is admin
+        return jsonify({'error': 'Admin access required'}), 403
     
     try:
         data = request.get_json()
@@ -781,7 +913,10 @@ def reject_assignments():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     
-    # TODO: Add admin permission check
+    # Check if user is admin
+    user = db.session.query(User).filter_by(id=session['user_id']).first()
+    if not user or user.user_type_id != 1:  # Assuming 1 is admin
+        return jsonify({'error': 'Admin access required'}), 403
     
     try:
         data = request.get_json()
