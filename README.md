@@ -115,7 +115,7 @@ python app.py
 - **URL**: `http://localhost:5000`
 - **Default Password**: `honor1##` (for all users)
 
-## 🔧 CLI Data Management Tools
+## CLI Data Management Tools
 
 ### Template Generation
 ```bash
@@ -141,7 +141,7 @@ flask clear-table users
 flask generate-template users users.json --format csv
 ```
 
-## 📋 API Endpoints
+## API Endpoints
 
 ### Assignment Management
 - `GET /api/assignments/store/{store_type}/{store_id}` - Get store assignments
