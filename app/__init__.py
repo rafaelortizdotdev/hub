@@ -7,7 +7,7 @@ from .extensions import db
 
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
-    app.secret_key = 'SECRET_KEY'  # TODO: load from env in production
+    app.secret_key = os.getenv('SECRET_KEY', 'SECRET_KEY')  # Load from env in production
     os.makedirs(app.instance_path, exist_ok=True)
 
     # Database URI: default to SQLite in instance/ unless DATABASE_URL provided

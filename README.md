@@ -1,156 +1,259 @@
-# HONOR Supervisor Hub
+# HONOR Supervisor Hub - Enterprise Store Assignment Management System
 
-Sistema de gestión para supervisores de HONOR que permite administrar tiendas, clientes y equipos.
+A comprehensive data pipeline and management system for retail store assignments, featuring advanced data modeling, bulk operations, and approval workflows.
 
-## Características Principales
+## 🏆 Portfolio Highlights
 
-### Dashboard del Supervisor
-- **Tiendas Asignadas**: Total de tiendas que tiene el supervisor
-- **Promotores**: Total de promotores asignados al supervisor
-- **Tiendas por Crear**: Listado detallado de tiendas pendientes de creación
-- **Mi Equipo**: Listado de clientes y promotores con distinción entre creados y pendientes
+**This project demonstrates advanced Data Engineering skills including:**
+- **Polymorphic Data Modeling** - Advanced database design patterns
+- **Enterprise Data Pipeline** - Complete data management system
+- **Bulk Data Operations** - SAP-style interface for scale
+- **Service Layer Architecture** - Clean, maintainable code structure
+- **Data Quality & Validation** - Comprehensive error handling
+- **CLI Data Tools** - Developer productivity and data management
 
-### Gestión de Tiendas Pendientes
-- Crear nuevas tiendas pendientes con toda la información requerida
-- Campos incluidos:
-  - Nombre de la tienda
-  - Nombre del cliente
-  - Ubicación (Estado, Ciudad, Urbanización/Municipio, Calle)
-  - Mercado/Centro Comercial (con opción de crear nuevos)
-  - Nivel y Local
-  - Capacidad mensual
-  - Ventas del último mes
-  - Características (Fachada, Mesa)
+## 🚀 Key Features
 
-### Gestión de Clientes Pendientes
-- Crear nuevos clientes pendientes con información completa
-- Campos incluidos:
-  - Información personal (Nombre, ID, Género)
-  - Contacto (Teléfono +58, Email)
-  - Ubicación (Provincia, Ciudad)
-  - Información automática (Organización VE001, Tipo MSS Non-HN FF, etc.)
+### Core Data Management
+- **Dual-List Assignment Manager** - SAP-style bulk operations interface
+- **Admin Approval Workflow** - Complete business process automation
+- **Store & Salesman Creation** - Forms with cascading dropdowns and validation
+- **Service Layer & API** - RESTful endpoints with comprehensive error handling
+- **Database Models** - Complete with proper relationships and constraints
 
-### Sistema de Aprobación
-- Botones de aprobación para tiendas y clientes pendientes
-- Una vez aprobados, se marcan como "APPROVED"
-- Preparado para integración con tablas principales del sistema
+### Advanced Data Engineering Features
+- **Polymorphic Assignments** - Support for active/pending entities
+- **Approval Workflow** - PENDING → APPROVED → ACTIVE state management
+- **ERP Integration Ready** - Sync tracking and workflow preparation
+- **CLI Data Tools** - Template generation, FK-aware loading, dry-run support
+- **Data Validation** - Multi-layer validation (frontend + backend)
+- **Audit Trail** - Complete change tracking and history
 
-## Estructura de la Base de Datos
+## 🏗️ Architecture
 
-### Tablas Principales
-- `pending_stores`: Tiendas pendientes de aprobación
-- `pending_clients`: Clientes pendientes de aprobación
-- `geography_codes`: Códigos geográficos para estados y ciudades
-- `market_centers`: Centros comerciales y mercados disponibles
+### Service Layer Pattern
+```
+┌─────────────┐
+│   Routes    │ ← HTTP Endpoints
+└──────┬──────┘
+       │
+┌──────▼──────┐
+│  Services   │ ← Business Logic (Single Responsibility)
+└──────┬──────┘
+       │
+┌──────▼──────┐
+│   Models    │ ← Database ORM
+└─────────────┘
+```
 
-### Campos de Reporte Preparados
-El sistema está preparado para generar reportes con las siguientes columnas:
-- **Store Name**: Concatenación de Store + Market + Level + City
-- **Short Store Name**: STORE + LOCAL
-- **Business Type**: Honor (fijo)
-- **Store Type**: Other (fijo)
-- **Organization Code**: VE001 (fijo)
-- **Geography Code**: Basado en geo_code
-- **Store Address**: Concatenación de dirección completa
-- **Store Monthly Capacity**: Campo CAPA
-- **Honor Mobile Phone Sales**: Campo VENTAS
-- **Honor Enter**: YES si VENTAS > 0, NO en caso contrario
-- **Channel ID**: 200017495501 (fijo)
+### Database Design
+- **Polymorphic Design**: `staff_type`/`staff_id` and `store_type`/`store_id` patterns
+- **Complex Relationships**: Proper FK constraints, indexes, and referential integrity
+- **Workflow States**: PENDING → APPROVED → ACTIVE with proper state management
+- **Audit Trail**: Complete timestamp tracking and approval history
 
-## Instalación y Configuración
+## 📊 Data Models
 
-### Requisitos
+### Core Entities
+- **Users** - Active staff members with role-based access
+- **PendingClients** - Staff awaiting approval
+- **Stores** - Active retail locations
+- **PendingStores** - Stores awaiting approval
+- **StoreAssignment** - Polymorphic assignment table with approval workflow
+
+### Key Features
+- **Polymorphic Assignments** - Single table handles multiple entity types
+- **Approval Workflow** - Complete business process automation
+- **ERP Sync Tracking** - Ready for enterprise system integration
+- **Performance Indexes** - Optimized for bulk operations
+
+## 🛠️ Technical Stack
+
+- **Backend**: Flask + SQLAlchemy
+- **Frontend**: Vanilla JavaScript + Tailwind CSS
+- **Database**: SQLite (production-ready for PostgreSQL)
+- **Migration**: Alembic with proper versioning
+- **CLI Tools**: Click-based data management commands
+- **UI Components**: SweetAlert2 for user feedback
+
+## 📈 Data Engineering Capabilities
+
+### Data Pipeline Features
+- **Template Generation**: Dynamic model discovery and JSON template creation
+- **FK-Aware Loading**: Topological sort for dependency resolution
+- **Dry-Run Support**: Validation before commit
+- **Archive System**: Historical data tracking with timestamps
+- **Bulk Operations**: Enterprise-scale data management
+
+### Data Quality & Validation
+- **Schema Validation**: Type checking, required fields, format validation
+- **Business Rules**: CI (7-10 digits), Phone (10-11 digits), status enums
+- **Referential Integrity**: FK validation, cascade handling
+- **Error Handling**: Comprehensive validation with detailed error messages
+
+## 🚀 Installation & Setup
+
+### Requirements
 - Python 3.7+
 - Flask
 - SQLite3
 
-### Instalación
-1. Clonar el repositorio
-2. Crear entorno virtual: `python -m venv venv`
-3. Activar entorno virtual:
-   - Windows: `venv\Scripts\activate`
-   - Linux/Mac: `source venv/bin/activate`
-4. Instalar dependencias: `pip install -r requirements.txt`
-5. Inicializar base de datos: `python init_db.py`
-6. Ejecutar aplicación: `python app.py`
+### Quick Start
+```bash
+# Clone repository
+git clone <repository-url>
+cd honor-hub
 
-### Acceso
-- URL: `http://localhost:5000`
-- Usar credenciales de supervisor existentes
+# Create virtual environment
+python -m venv venv
 
-## Autenticación
+# Activate virtual environment
+# Windows:
+venv\Scripts\activate
+# Linux/Mac:
+source venv/bin/activate
 
-El sistema utiliza un sistema de autenticación basado en sesiones:
+# Install dependencies
+pip install -r requirements.txt
 
-- **Contraseña por Defecto**: Todos los usuarios comienzan con la contraseña `honor1##`
-- **Formato de ID**: Los IDs de Honor pueden ser cualquier identificador único (formato flexible)
-- **Validación**: Solo se valida que el ID exista en la base de datos y pertenezca a un supervisor
-- **Nota**: La funcionalidad de cambio de contraseña estará disponible en futuras actualizaciones
+# Initialize database
+python init_db.py
 
-## Uso del Sistema
-
-### Gestión Unificada (Recomendado)
-1. Ir al Dashboard
-2. Hacer clic en "🚀 Gestión Unificada"
-3. **Sección Tienda**: Buscar tienda existente por código APSVE O crear nueva tienda
-4. **Sección Cliente**: Buscar cliente existente O crear nuevo cliente
-5. **Sección Asignación**: Asignar cliente a nueva tienda y/o tiendas existentes
-6. **Envío**: Todo se procesa en una sola operación
-
-### Crear Nueva Tienda Pendiente (Formulario Individual)
-1. Ir al Dashboard
-2. Hacer clic en "+ Nueva Tienda"
-3. Completar formulario con información de la tienda
-4. Seleccionar estado y ciudad del dropdown
-5. Elegir mercado/centro comercial existente o crear uno nuevo
-6. Completar campos de capacidad y ventas
-7. Marcar características (fachada, mesa)
-8. Guardar
-
-### Crear Nuevo Cliente Pendiente (Formulario Individual)
-1. Ir al Dashboard
-2. Hacer clic en "+ Nuevo Cliente"
-3. Completar información personal del cliente
-4. Ingresar número de contacto (automáticamente +58)
-5. Seleccionar estado y ciudad
-6. La información automática se establece por defecto
-7. Guardar
-
-### Aprobar Tiendas/Clientes
-1. En el Dashboard, ver la sección correspondiente
-2. Hacer clic en "Aprobar" junto al elemento deseado
-3. Confirmar la acción
-4. El elemento se marcará como aprobado
-
-## Estructura de Archivos
-
-```
-hub/
-├── app.py                 # Aplicación principal Flask
-├── init_db.py            # Script de inicialización de BD
-├── honor_hub.db          # Base de datos SQLite
-├── templates/            # Plantillas HTML
-│   ├── dashboard.html    # Dashboard principal
-│   ├── login.html        # Página de login
-│   ├── unified_store_client_form.html  # Formulario unificado (RECOMENDADO)
-│   ├── create_pending_store.html    # Formulario individual de tienda
-│   └── create_pending_client.html   # Formulario individual de cliente
-└── README.md             # Este archivo
+# Run application
+python app.py
 ```
 
-## Funcionalidades Futuras
+### Access
+- **URL**: `http://localhost:5000`
+- **Default Password**: `honor1##` (for all users)
 
-- Integración completa con tablas principales del sistema
-- Generación automática de reportes
-- Sistema de notificaciones
-- Historial de cambios
-- Exportación de datos
-- API REST completa
+## 🔧 CLI Data Management Tools
 
-## Soporte
+### Template Generation
+```bash
+# Generate templates for all tables
+flask generate-all-templates
 
-Para soporte técnico o preguntas sobre el sistema, contactar al equipo de desarrollo de HONOR.
+# Generate specific table template
+flask generate-template users users.json
 
-## Licencia
+# Load data from templates
+flask load-templates --dry-run
+```
 
-Sistema interno de HONOR - Uso exclusivo para empleados autorizados.
+### Data Operations
+```bash
+# Populate table from JSON/CSV
+flask populate-table users users.json
+
+# Clear table data
+flask clear-table users
+
+# Export table data
+flask generate-template users users.json --format csv
+```
+
+## 📋 API Endpoints
+
+### Assignment Management
+- `GET /api/assignments/store/{store_type}/{store_id}` - Get store assignments
+- `GET /api/assignments/available-staff` - Get available staff
+- `POST /api/assignments/bulk` - Bulk assign/remove operations
+
+### Admin Operations
+- `GET /api/admin/assignments/pending` - Get pending assignments
+- `PATCH /api/admin/assignments/approve` - Approve assignments
+- `PATCH /api/admin/assignments/reject` - Reject assignments
+- `PATCH /api/admin/assignments/sync` - Mark as synced to ERP
+
+## 🎯 Business Workflow
+
+### Complete Assignment Lifecycle
+1. **Supervisor Creates Assignment** - Selects store and staff
+2. **Admin Reviews** - Views in approval interface
+3. **Approval Decision** - Approve or reject with reason
+4. **ERP Sync** - Mark as synced to enterprise system
+
+### User Roles
+- **Supervisor**: Create stores/staff, submit assignments
+- **Admin**: Approve/reject assignments, create promoters, ERP sync
+
+## 📁 Project Structure
+
+```
+honor-hub/
+├── app/
+│   ├── __init__.py          # Flask app factory
+│   ├── models.py            # SQLAlchemy models
+│   ├── extensions.py        # Database extensions
+│   ├── routes/
+│   │   ├── api.py          # API endpoints & services
+│   │   ├── dashboard.py    # Dashboard routes
+│   │   └── auth.py         # Authentication
+│   └── templates/           # HTML templates
+├── docs/                    # Documentation
+│   ├── DESIGN.md           # Architecture & design
+│   ├── CHANGELOG.md        # All changes & fixes
+│   └── DE_TODO.md          # Future work
+├── data/                    # Data templates & archives
+├── migrations/              # Alembic migrations
+├── tests/                   # Test files
+└── requirements.txt         # Dependencies
+```
+
+## 🔍 Data Engineering Patterns
+
+### Polymorphic Data Modeling
+```python
+# Single table handles multiple entity types
+class StoreAssignment(db.Model):
+    staff_type = db.Column(db.String)  # 'user' or 'pending_client'
+    staff_id = db.Column(db.String)    # The actual ID
+    store_type = db.Column(db.String)  # 'store' or 'pending_store'
+    store_id = db.Column(db.String)    # The actual ID
+```
+
+### Service Layer Architecture
+```python
+class AssignmentService:
+    def bulk_create_assignments(self, assignments):
+        # Business logic with transaction safety
+        # Comprehensive error handling
+        # Detailed validation
+```
+
+### CLI Data Tools
+```python
+@app.cli.command("load-templates")
+def load_templates(in_dir, dry_run=False):
+    # FK-aware loading order
+    # Dry-run validation
+    # Archive system
+    # Error handling
+```
+
+## 🎯 Portfolio Value
+
+This project demonstrates:
+- **Enterprise Data Pipeline** - Complete data management system
+- **Advanced Database Design** - Polymorphic patterns, proper relationships
+- **Business Process Automation** - Real-world workflow automation
+- **Scalable Architecture** - Designed for enterprise use
+- **Data Quality Focus** - Comprehensive validation and error handling
+- **Developer Productivity** - CLI tools and template generation
+
+## 🔮 Future Enhancements
+
+- **ERP Template Generation** - Excel export/import
+- **Analytics Dashboard** - Data insights and metrics
+- **Notification System** - Real-time updates
+- **Performance Monitoring** - System metrics and logging
+- **PostgreSQL Migration** - Production database upgrade
+
+## 📄 License
+
+Internal HONOR system - Authorized use only.
+
+---
+
+**Built with ❤️ for Data Engineering Excellence**

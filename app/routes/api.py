@@ -987,7 +987,10 @@ def mark_synced():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     
-    # TODO: Add admin permission check
+    # Check admin permission
+    user = User.query.get(session['user_id'])
+    if not user or user.user_type.name != 'ADMIN':
+        return jsonify({'error': 'Admin access required'}), 403
     
     try:
         data = request.get_json()

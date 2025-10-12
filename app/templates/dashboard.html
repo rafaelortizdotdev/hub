@@ -19,13 +19,13 @@
         </div>
         <div class="flex items-center space-x-4">
           <span class="text-sm text-gray-700">
-            Bienvenido, <span class="font-medium">{{ session.name }}</span>
+            Welcome, <span class="font-medium">{{ session.name }}</span>
             <span class="text-xs text-gray-500 ml-2">({{ session.honor_id }})</span>
           </span>
 
           <a href="{{ url_for('auth.logout') }}" 
              class="px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md">
-            Cerrar Sesión
+            Logout
           </a>
         </div>
       </div>
@@ -39,7 +39,7 @@
       <div class="flex justify-between items-center">
         <div>
           <h2 class="text-2xl font-bold text-gray-900 mb-2">Dashboard</h2>
-          <p class="text-gray-600">Gestiona tus tiendas y equipo</p>
+          <p class="text-gray-600">Manage your stores and team</p>
         </div>
         <div class="flex space-x-3">
           {% if is_admin %}
@@ -74,7 +74,7 @@
             </svg>
           </div>
           <div class="ml-4">
-            <p class="text-sm font-medium text-gray-600">Tiendas Asignadas</p>
+            <p class="text-sm font-medium text-gray-600">Assigned Stores</p>
             <p class="text-2xl font-bold text-gray-900">{{ stores|length }}</p>
           </div>
         </div>
@@ -88,7 +88,7 @@
             </svg>
           </div>
           <div class="ml-4">
-            <p class="text-sm font-medium text-gray-600">Promotores</p>
+            <p class="text-sm font-medium text-gray-600">Promoters</p>
             <p class="text-2xl font-bold text-gray-900">
               {{ promoters_count or 0 }}
             </p>
@@ -104,7 +104,7 @@
             </svg>
           </div>
           <div class="ml-4">
-            <p class="text-sm font-medium text-gray-600">Tiendas por Crear</p>
+            <p class="text-sm font-medium text-gray-600">Stores to Create</p>
             <p class="text-2xl font-bold text-gray-900">{{ pending_stores|length }}</p>
           </div>
         </div>
@@ -118,7 +118,7 @@
             </svg>
           </div>
           <div class="ml-4">
-            <p class="text-sm font-medium text-gray-600">Ventas del Mes</p>
+            <p class="text-sm font-medium text-gray-600">Monthly Sales</p>
             <p class="text-2xl font-bold text-gray-900">
               {% set current_month = 12 %}
               {% set current_year = 2024 %}
@@ -130,7 +130,7 @@
                   {% endif %}
                 {% endfor %}
               {% endfor %}
-              {{ sales_count }} registros
+              {{ sales_count }} records
             </p>
           </div>
         </div>
@@ -140,7 +140,7 @@
     <!-- Pending Stores Section -->
     <div class="bg-white rounded-lg shadow mb-8">
       <div class="px-6 py-4 border-b border-gray-200">
-        <h3 class="text-lg font-medium text-gray-900">Tiendas por Crear</h3>
+        <h3 class="text-lg font-medium text-gray-900">Stores to Create</h3>
       </div>
       <div class="overflow-x-auto">
         {% if pending_stores %}
@@ -197,8 +197,8 @@
             <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
             </svg>
-            <h3 class="mt-2 text-sm font-medium text-gray-900">No hay tiendas pendientes</h3>
-            <p class="mt-1 text-sm text-gray-500">Todas las tiendas han sido creadas.</p>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">No pending stores</h3>
+            <p class="mt-1 text-sm text-gray-500">All stores have been created.</p>
           </div>
         {% endif %}
       </div>
@@ -207,18 +207,18 @@
     <!-- Stores Section -->
     <div class="bg-white rounded-lg shadow mb-8">
       <div class="px-6 py-4 border-b border-gray-200">
-        <h3 class="text-lg font-medium text-gray-900">Mis Tiendas</h3>
+        <h3 class="text-lg font-medium text-gray-900">My Stores</h3>
       </div>
       <div class="overflow-x-auto">
         {% if stores %}
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tienda</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empresa</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ubicación</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nivel/Local</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Store</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Level/Local</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
@@ -227,7 +227,7 @@
                   <td class="px-6 py-4 whitespace-nowrap">
                     <div>
                       <div class="text-sm font-medium text-gray-900">{{ store.store_name }}</div>
-                      <div class="text-sm text-gray-500">Código: {{ store.id }}</div>
+                      <div class="text-sm text-gray-500">Code: {{ store.id }}</div>
                     </div>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -242,7 +242,7 @@
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap">
                     <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                      Activa
+                      Active
                     </span>
                   </td>
                 </tr>
@@ -304,7 +304,7 @@
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap">
                     <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                      Creado
+                      Created
                     </span>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap">
@@ -322,8 +322,8 @@
             <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
             </svg>
-            <h3 class="mt-2 text-sm font-medium text-gray-900">No hay miembros en tu equipo</h3>
-            <p class="mt-1 text-sm text-gray-500">Los miembros del equipo aparecerán aquí cuando sean asignados.</p>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">No team members</h3>
+            <p class="mt-1 text-sm text-gray-500">Team members will appear here when assigned.</p>
           </div>
         {% endif %}
       </div>
@@ -332,18 +332,18 @@
     <!-- Pending Clients Section -->
     <div class="bg-white rounded-lg shadow mt-8">
       <div class="px-6 py-4 border-b border-gray-200">
-        <h3 class="text-lg font-medium text-gray-900">Clientes Pendientes</h3>
+        <h3 class="text-lg font-medium text-gray-900">Pending Clients</h3>
       </div>
       <div class="overflow-x-auto">
         {% if pending_clients %}
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacto</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ubicación</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
@@ -430,20 +430,20 @@
 
     // Show success message if redirected from login
     {% if request.args.get('login_success') %}
-      Toast.fire({ icon: 'success', title: '¡Bienvenido al sistema!' });
+      Toast.fire({ icon: 'success', title: 'Welcome to the system!' });
     {% endif %}
 
     // Function to approve a store
     function approveStore(storeId) {
       Swal.fire({
-        title: '¿Aprobar tienda?',
-        text: 'Esta acción marcará la tienda como aprobada',
+        title: 'Approve store?',
+        text: 'This action will mark the store as approved',
         icon: 'question',
         showCancelButton: true,
         confirmButtonColor: '#10B981',
         cancelButtonColor: '#6B7280',
-        confirmButtonText: 'Sí, aprobar',
-        cancelButtonText: 'Cancelar'
+        confirmButtonText: 'Yes, approve',
+        cancelButtonText: 'Cancel'
       }).then((result) => {
         if (result.isConfirmed) {
           fetch(`/approve-store/${storeId}`, {
@@ -455,15 +455,15 @@
           .then(response => response.json())
           .then(data => {
             if (data.success) {
-              Toast.fire({ icon: 'success', title: 'Tienda aprobada exitosamente' });
+              Toast.fire({ icon: 'success', title: 'Store approved successfully' });
               setTimeout(() => location.reload(), 1500);
             } else {
-              Toast.fire({ icon: 'error', title: 'Error al aprobar la tienda' });
+              Toast.fire({ icon: 'error', title: 'Error approving store' });
             }
           })
           .catch(error => {
             console.error('Error:', error);
-            Toast.fire({ icon: 'error', title: 'Error al aprobar la tienda' });
+            Toast.fire({ icon: 'error', title: 'Error approving store' });
           });
         }
       });
@@ -472,14 +472,14 @@
     // Function to approve a client
     function approveClient(clientId) {
       Swal.fire({
-        title: '¿Aprobar cliente?',
-        text: 'Esta acción marcará el cliente como aprobado',
+        title: 'Approve client?',
+        text: 'This action will mark the client as approved',
         icon: 'question',
         showCancelButton: true,
         confirmButtonColor: '#10B981',
         cancelButtonColor: '#6B7280',
-        confirmButtonText: 'Sí, aprobar',
-        cancelButtonText: 'Cancelar'
+        confirmButtonText: 'Yes, approve',
+        cancelButtonText: 'Cancel'
       }).then((result) => {
         if (result.isConfirmed) {
           fetch(`/approve-client/${clientId}`, {
@@ -491,15 +491,15 @@
           .then(response => response.json())
           .then(data => {
             if (data.success) {
-              Toast.fire({ icon: 'success', title: 'Cliente aprobado exitosamente' });
+              Toast.fire({ icon: 'success', title: 'Client approved successfully' });
               setTimeout(() => location.reload(), 1500);
             } else {
-              Toast.fire({ icon: 'error', title: 'Error al aprobar el cliente' });
+              Toast.fire({ icon: 'error', title: 'Error approving client' });
             }
           })
           .catch(error => {
             console.error('Error:', error);
-            Toast.fire({ icon: 'error', title: 'Error al aprobar el cliente' });
+            Toast.fire({ icon: 'error', title: 'Error approving client' });
           });
         }
       });
