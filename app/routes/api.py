@@ -128,11 +128,21 @@ class AssignmentService:
         
         available = []
         
-        # Get active users (store staff type)
+        # Determine which user_type_id to filter by based on role
+        # SALESMAN -> user_type_id 4 (STORE_STAFF_2)
+        # PROMOTER -> user_type_id 2 (PROMOTER)
+        user_type_filter = 2 if role == 'PROMOTER' else 4
+        
+        print(f"[DEBUG] get_available_staff - role: {role}, user_type_filter: {user_type_filter}")
+        
+        # Get active users filtered by user_type
         users = db.session.query(User).filter_by(
             supervisor_id=supervisor_id,
-            status='ACTIVE'
+            status='ACTIVE',
+            user_type_id=user_type_filter
         ).all()
+        
+        print(f"[DEBUG] Found {len(users)} users with user_type_id={user_type_filter}")
         
         for user in users:
             if ('user', user.id) not in assigned_pairs:
@@ -152,11 +162,18 @@ class AssignmentService:
                     'stores_count': stores_count
                 })
         
-        # Get pending clients
-        pending_clients = db.session.query(PendingClients).filter_by(
-            supervisor_id=supervisor_id,
-            status='PENDING'
-        ).all()
+        # Get pending clients (only for SALESMAN role, not PROMOTER)
+        # Pending clients don't have user_type, so we assume they're salesmen
+        if role != 'PROMOTER':
+            pending_clients = db.session.query(PendingClients).filter_by(
+                supervisor_id=supervisor_id,
+                status='PENDING'
+            ).all()
+            
+            print(f"[DEBUG] Found {len(pending_clients)} pending clients")
+        else:
+            pending_clients = []
+            print(f"[DEBUG] Skipping pending clients for PROMOTER role")
         
         for client in pending_clients:
             if ('pending_client', str(client.id)) not in assigned_pairs:

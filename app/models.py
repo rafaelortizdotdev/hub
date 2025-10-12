@@ -23,6 +23,11 @@ class User(db.Model, TimestampMixin):
     status = db.Column(status_enum, default='ACTIVE')
     password_hash = db.Column(db.String, nullable=False)
     is_first_login = db.Column(db.Boolean, default=True)
+    
+    # Relationships
+    user_type = db.relationship('UserType', lazy='joined', primaryjoin="User.user_type_id==UserType.id")
+    supervisor = db.relationship('User', remote_side=[id], backref='subordinates')
+    region_rel = db.relationship('Region', lazy='joined', primaryjoin="User.region==Region.id")
 
 class UserType(db.Model, TimestampMixin):
     __tablename__ = 'user_types'

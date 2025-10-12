@@ -1,3 +1,26 @@
+"""
+Dashboard routes for the HONOR Supervisor Hub.
+
+This module provides all dashboard-related functionality including:
+- Main supervisor dashboard with stores, team members, and pending items
+- Store and salesman creation forms
+- Assignment management interface
+- Admin approval interface
+- Debug API endpoints
+
+Key Features:
+- Consistent SQLAlchemy ORM usage with optimized queries
+- Proper authentication and authorization decorators
+- Type hints and comprehensive docstrings
+- Efficient data conversion and template preparation
+- Professional error handling patterns
+
+Author: HONOR Development Team
+Version: 1.0.0
+"""
+
+from functools import wraps
+from typing import Dict, List, Optional, Any
 from flask import Blueprint, render_template, redirect, url_for, session, request, jsonify
 from sqlalchemy.orm import joinedload
 
@@ -6,20 +29,169 @@ from ..models import Stores, User, PendingStores, PendingClients
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
+# Constants
+ADMIN_USER_TYPE_ID = 1
+PENDING_STATUS = 'PENDING'
+AMBASSADOR_ROLE_KEYWORD = 'AMBASSADOR'
+DEFAULT_NA_VALUE = 'N/A'
 
-@dashboard_bp.route('/dashboard')
-def dashboard():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
 
+def require_auth(f):
+    """Decorator to require user authentication for routes."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('auth.login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+def require_admin(f):
+    """Decorator to require admin privileges for routes."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('auth.login'))
+        
+        from ..extensions import db
+        from ..models import User
+        
+        user = db.session.query(User).filter_by(id=session['user_id']).first()
+        if not user or user.user_type_id != ADMIN_USER_TYPE_ID:
+            return redirect(url_for('dashboard.dashboard'))
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+def convert_stores_to_dict(stores: List[Stores]) -> List[Dict[str, Any]]:
+    """Convert store objects to template-friendly dictionaries."""
+    return [{
+        'id': store.id,
+        'store_name': store.store_name,
+        'company': store.company.name if store.company else DEFAULT_NA_VALUE,
+        'city_name': store.city.name if store.city else DEFAULT_NA_VALUE,
+        'province_name': store.province.name if store.province else DEFAULT_NA_VALUE,
+        'level': store.level,
+        'local': store.local,
+        'sales': store.sales
+    } for store in stores]
+
+
+def convert_pending_stores_to_dict(pending_stores: List[PendingStores]) -> List[Dict[str, Any]]:
+    """Convert pending store objects to template-friendly dictionaries."""
+    return [{
+        'id': store.id,
+        'store_name': store.store_name,
+        'store_code': store.store_code,
+        'company': store.company.name if store.company else DEFAULT_NA_VALUE,
+        'city_name': store.city.name if store.city else DEFAULT_NA_VALUE,
+        'province_name': store.province.name if store.province else DEFAULT_NA_VALUE,
+        'market_center': store.market_center.name if store.market_center else DEFAULT_NA_VALUE,
+        'level': store.level,
+        'local': store.local,
+        'street': store.street
+    } for store in pending_stores]
+
+
+def convert_pending_clients_to_dict(pending_clients: List[PendingClients]) -> List[Dict[str, Any]]:
+    """Convert pending client objects to template-friendly dictionaries."""
+    return [{
+        'id': client.id,
+        'name': client.name,
+        'client_id': client.client_id,
+        'gender': client.gender,
+        'contact_number': client.contact_number,
+        'email': client.email,
+        'city_name': client.city.name if client.city else DEFAULT_NA_VALUE,
+        'province_name': client.province.name if client.province else DEFAULT_NA_VALUE
+    } for client in pending_clients]
+
+
+def get_team_members_with_counts(supervisor_id: str) -> List[Dict[str, Any]]:
+    """
+    Get team members with their store counts using optimized SQLAlchemy ORM queries.
+    
+    Args:
+        supervisor_id: The supervisor's user ID
+        
+    Returns:
+        List of team member dictionaries with store counts included
+        
+    Note:
+        Uses joinedload for efficient relationship loading and a single query
+        for store counts to minimize database round trips.
+    """
     from ..extensions import db
     from ..models import User
     
-    # Get current user to check if admin
-    current_user = db.session.query(User).filter_by(id=session['user_id']).first()
-    is_admin = current_user and current_user.user_type_id == 1  # Assuming 1 is admin
+    # Get team members with their user types using joinedload for efficiency
+    team_members = db.session.query(User).options(
+        joinedload(User.user_type),
+        joinedload(User.region_rel)
+    ).filter(
+        User.supervisor_id == supervisor_id
+    ).all()
     
-    # Use SQLAlchemy ORM to load stores with relationships
+    # Convert to dict format
+    team_members_data = []
+    for member in team_members:
+        member_dict = {
+            'honor_id': member.id,
+            'name': member.name,
+            'position_id': member.position_id,
+            'region': member.region,
+            'region_name': member.region_rel.name if member.region_rel else DEFAULT_NA_VALUE,
+            'phone': member.phone,
+            'status': member.status,
+            'user_type_name': member.user_type.name if member.user_type else DEFAULT_NA_VALUE,
+            'supervisor_id': member.supervisor_id,
+            'is_ambassador': AMBASSADOR_ROLE_KEYWORD in (member.user_type.name or '').upper(),
+            'store_count': 0  # Will be updated below
+        }
+        team_members_data.append(member_dict)
+    
+    # Get store counts for each team member in a single optimized query
+    if team_members_data:
+        member_ids = [str(member['honor_id']) for member in team_members_data]
+        
+        # Single query to get all store counts at once
+        store_counts = db.session.query(
+            Stores.supervisor_id,
+            db.func.count(Stores.id).label('store_count')
+        ).filter(
+            Stores.supervisor_id.in_(member_ids)
+        ).group_by(Stores.supervisor_id).all()
+        
+        # Create lookup dictionary for O(1) access
+        store_counts_dict = {str(count.supervisor_id): count.store_count for count in store_counts}
+        
+        # Update team members with store counts
+        for member in team_members_data:
+            member['store_count'] = int(store_counts_dict.get(str(member['honor_id']), 0))
+    
+    return team_members_data
+
+
+@dashboard_bp.route('/dashboard')
+@require_auth
+def dashboard() -> str:
+    """
+    Main dashboard route displaying supervisor's stores, team members, and pending items.
+    
+    Returns:
+        Rendered dashboard template with all relevant data for the supervisor.
+    """
+    from ..extensions import db
+    from ..models import User
+    
+    supervisor_id = session['user_id']
+    
+    # Get current user to check if admin
+    current_user = db.session.query(User).filter_by(id=supervisor_id).first()
+    is_admin = current_user and current_user.user_type_id == ADMIN_USER_TYPE_ID
+    
+    # Load stores with relationships using SQLAlchemy ORM with joinedload for efficiency
     stores = db.session.query(Stores).options(
         joinedload(Stores.sales),
         joinedload(Stores.company),
@@ -27,131 +199,39 @@ def dashboard():
         joinedload(Stores.province),
         joinedload(Stores.market_center)
     ).filter(
-        Stores.supervisor_id == session['user_id']
+        Stores.supervisor_id == supervisor_id
     ).all()
 
-    conn = get_db_connection()
-
-    team_members_rows = conn.execute(
-        '''
-        SELECT 
-            u.id AS honor_id,
-            u.name,
-            u.position_id,
-            u.region,
-            r.name AS region_name,
-            u.phone,
-            u.status,
-            ut.name AS user_type_name,
-            u.supervisor_id AS supervisor_id
-        FROM users u 
-        JOIN user_types ut ON u.user_type_id = ut.id 
-        LEFT JOIN regions r ON CAST(u.region AS INTEGER) = r.id
-        WHERE (
-            CAST(u.supervisor_id AS TEXT) = ?
-            OR UPPER(CAST(u.supervisor_id AS TEXT)) = UPPER(?)
-            OR LOWER(CAST(u.supervisor_id AS TEXT)) = LOWER(?)
-        )
-        ''',
-        (session['user_id'], session['user_id'], session['user_id']),
-    ).fetchall()
-
-    # Use SQLAlchemy ORM to load pending stores with relationships
+    # Load pending stores with relationships
     pending_stores = db.session.query(PendingStores).options(
         joinedload(PendingStores.company),
         joinedload(PendingStores.city),
         joinedload(PendingStores.province),
         joinedload(PendingStores.market_center)
     ).filter(
-        PendingStores.supervisor_id == session['user_id'],
-        PendingStores.status == 'PENDING'
+        PendingStores.supervisor_id == supervisor_id,
+        PendingStores.status == PENDING_STATUS
     ).all()
 
-    # Use SQLAlchemy ORM to load pending clients with relationships
+    # Load pending clients with relationships
     pending_clients = db.session.query(PendingClients).options(
         joinedload(PendingClients.city),
         joinedload(PendingClients.province)
     ).filter(
-        PendingClients.supervisor_id == session['user_id'],
-        PendingClients.status == 'PENDING'
+        PendingClients.supervisor_id == supervisor_id,
+        PendingClients.status == PENDING_STATUS
     ).all()
 
-    # Convert stores to dict format for template compatibility
-    stores_data = []
-    for store in stores:
-        store_dict = {
-            'id': store.id,
-            'store_name': store.store_name,
-            'company': store.company.name if store.company else 'N/A',
-            'city_name': store.city.name if store.city else 'N/A',
-            'province_name': store.province.name if store.province else 'N/A',
-            'level': store.level,
-            'local': store.local,
-            'sales': store.sales  # Include sales relationship
-        }
-        stores_data.append(store_dict)
-
-    team_members = [dict(r) for r in team_members_rows]
-
-    member_ids = [str(m.get('honor_id')) for m in team_members if m.get('honor_id') is not None]
-    store_counts_by_supervisor = {}
-    if member_ids:
-        placeholders = ','.join(['?'] * len(member_ids))
-        count_rows = conn.execute(
-            f"""
-            SELECT CAST(supervisor_id AS TEXT) AS supervisor_id_text, COUNT(1) AS c
-            FROM stores
-            WHERE CAST(supervisor_id AS TEXT) IN ({placeholders})
-            GROUP BY CAST(supervisor_id AS TEXT)
-            """,
-            tuple(member_ids),
-        ).fetchall()
-        for r in count_rows:
-            store_counts_by_supervisor[str(r['supervisor_id_text'])] = r['c']
-
-    # Attach store_count to each team member
-    for m in team_members:
-        m['store_count'] = int(store_counts_by_supervisor.get(str(m.get('honor_id')), 0))
-
-    for member in team_members:
-        role_name = (member.get('user_type_name') or '').upper()
-        member['is_ambassador'] = ('AMBASSADOR' in role_name)
-
-    promoters_count = sum(1 for m in team_members if m.get('is_ambassador'))
-
-    # Convert pending stores to dict format
-    pending_stores_data = []
-    for store in pending_stores:
-        store_dict = {
-            'id': store.id,
-            'store_name': store.store_name,
-            'store_code': store.store_code,
-            'company': store.company.name if store.company else 'N/A',
-            'city_name': store.city.name if store.city else 'N/A',
-            'province_name': store.province.name if store.province else 'N/A',
-            'market_center': store.market_center.name if store.market_center else 'N/A',
-            'level': store.level,
-            'local': store.local,
-            'street': store.street
-        }
-        pending_stores_data.append(store_dict)
-
-    # Convert pending clients to dict format
-    pending_clients_data = []
-    for client in pending_clients:
-        client_dict = {
-            'id': client.id,
-            'name': client.name,
-            'client_id': client.client_id,
-            'gender': client.gender,
-            'contact_number': client.contact_number,
-            'email': client.email,
-            'city_name': client.city.name if client.city else 'N/A',
-            'province_name': client.province.name if client.province else 'N/A'
-        }
-        pending_clients_data.append(client_dict)
-
-    conn.close()
+    # Convert data to template-friendly format
+    stores_data = convert_stores_to_dict(stores)
+    pending_stores_data = convert_pending_stores_to_dict(pending_stores)
+    pending_clients_data = convert_pending_clients_to_dict(pending_clients)
+    
+    # Get team members with store counts
+    team_members = get_team_members_with_counts(supervisor_id)
+    
+    # Calculate promoters count
+    promoters_count = sum(1 for member in team_members if member.get('is_ambassador'))
 
     return render_template(
         'dashboard.html',
@@ -165,50 +245,59 @@ def dashboard():
 
 
 @dashboard_bp.route('/api/dashboard-debug')
-def dashboard_debug():
-    if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-
-    conn = get_db_connection()
-
-    # Samples and counts
-    stores_count = conn.execute(
-        'SELECT COUNT(1) as c FROM stores WHERE CAST(supervisor_id AS TEXT) = ? OR UPPER(CAST(supervisor_id AS TEXT)) = UPPER(?) OR LOWER(CAST(supervisor_id AS TEXT)) = LOWER(?)',
-        (session['user_id'], session['user_id'], session['user_id'])
-    ).fetchone()['c']
-
-    team_members = conn.execute(
-        '''
-        SELECT u.id AS honor_id, u.name, u.user_type_id, u.supervisor_id, ut.name AS user_type_name
-        FROM users u JOIN user_types ut ON u.user_type_id = ut.id
-        WHERE CAST(u.supervisor_id AS TEXT) = ?
-           OR UPPER(CAST(u.supervisor_id AS TEXT)) = UPPER(?)
-           OR LOWER(CAST(u.supervisor_id AS TEXT)) = LOWER(?)
-        LIMIT 50
-        ''',
-        (session['user_id'], session['user_id'], session['user_id'])
-    ).fetchall()
-
-    any_users = conn.execute(
-        'SELECT id, name, user_type_id, supervisor_id FROM users LIMIT 50'
-    ).fetchall()
-
-    pending_stores_count = conn.execute(
-        'SELECT COUNT(1) as c FROM pending_stores WHERE CAST(supervisor_id AS TEXT) = ? OR UPPER(CAST(supervisor_id AS TEXT)) = UPPER(?) OR LOWER(CAST(supervisor_id AS TEXT)) = LOWER(?) AND status = "PENDING"',
-        (session['user_id'], session['user_id'], session['user_id'])
-    ).fetchone()['c']
-
-    pending_clients_count = conn.execute(
-        'SELECT COUNT(1) as c FROM pending_clients WHERE CAST(supervisor_id AS TEXT) = ? OR UPPER(CAST(supervisor_id AS TEXT)) = UPPER(?) OR LOWER(CAST(supervisor_id AS TEXT)) = LOWER(?) AND status = "PENDING"',
-        (session['user_id'], session['user_id'], session['user_id'])
-    ).fetchone()['c']
-
-    conn.close()
-
-    team_members_list = [dict(r) for r in team_members]
-    any_users_list = [dict(r) for r in any_users]
-
-    promoters_count = sum(1 for m in team_members_list if 'AMBASSADOR' in (m.get('user_type_name') or '').upper())
+@require_auth
+def dashboard_debug() -> Dict[str, Any]:
+    """
+    Debug API endpoint providing dashboard metrics and sample data.
+    
+    Returns:
+        JSON response with counts, samples, and debug information.
+    """
+    from ..extensions import db
+    from ..models import User
+    
+    supervisor_id = session['user_id']
+    
+    # Get counts using SQLAlchemy ORM for consistency
+    stores_count = db.session.query(Stores).filter(
+        Stores.supervisor_id == supervisor_id
+    ).count()
+    
+    pending_stores_count = db.session.query(PendingStores).filter(
+        PendingStores.supervisor_id == supervisor_id,
+        PendingStores.status == PENDING_STATUS
+    ).count()
+    
+    pending_clients_count = db.session.query(PendingClients).filter(
+        PendingClients.supervisor_id == supervisor_id,
+        PendingClients.status == PENDING_STATUS
+    ).count()
+    
+    # Get team members sample
+    team_members = db.session.query(User).options(
+        joinedload(User.user_type)
+    ).filter(
+        User.supervisor_id == supervisor_id
+    ).limit(50).all()
+    
+    team_members_list = [{
+        'honor_id': member.id,
+        'name': member.name,
+        'user_type_id': member.user_type_id,
+        'supervisor_id': member.supervisor_id,
+        'user_type_name': member.user_type.name if member.user_type else DEFAULT_NA_VALUE
+    } for member in team_members]
+    
+    # Get any users sample for debugging
+    any_users = db.session.query(User).limit(50).all()
+    any_users_list = [{
+        'id': user.id,
+        'name': user.name,
+        'user_type_id': user.user_type_id,
+        'supervisor_id': user.supervisor_id
+    } for user in any_users]
+    
+    promoters_count = sum(1 for m in team_members_list if AMBASSADOR_ROLE_KEYWORD in (m.get('user_type_name') or '').upper())
 
     return jsonify({
         'session_user_id': session.get('user_id'),
@@ -222,11 +311,14 @@ def dashboard_debug():
     })
 
 @dashboard_bp.route('/create-store')
-def create_store_page():
-    """Simple store creation form"""
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
+@require_auth
+def create_store_page() -> str:
+    """
+    Store creation form page with dropdown options.
     
+    Returns:
+        Rendered store creation template with all required options.
+    """
     from ..extensions import db
     from ..models import Province, City, Company, MarketCenter
     
@@ -250,11 +342,14 @@ def create_store_page():
 
 
 @dashboard_bp.route('/create-salesman')
-def create_salesman_page():
-    """Simple salesman creation form"""
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
+@require_auth
+def create_salesman_page() -> str:
+    """
+    Salesman creation form page with location options.
     
+    Returns:
+        Rendered salesman creation template with province and city options.
+    """
     from ..extensions import db
     from ..models import Province, City
     
@@ -270,14 +365,18 @@ def create_salesman_page():
 
 
 @dashboard_bp.route('/assignments')
-def assignments_page():
-    """Assignment manager with dual-list UI"""
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
+@require_auth
+def assignments_page() -> str:
+    """
+    Assignment manager page with dual-list UI for managing store assignments.
     
+    Returns:
+        Rendered assignments template with active and pending stores.
+    """
     from ..extensions import db
     from ..models import Stores, PendingStores
-    from sqlalchemy.orm import joinedload
+    
+    supervisor_id = session['user_id']
     
     # Get all stores (active and pending) for the supervisor
     active_stores = db.session.query(Stores).options(
@@ -285,7 +384,7 @@ def assignments_page():
         joinedload(Stores.city),
         joinedload(Stores.province)
     ).filter(
-        Stores.supervisor_id == session['user_id']
+        Stores.supervisor_id == supervisor_id
     ).all()
     
     pending_stores = db.session.query(PendingStores).options(
@@ -293,8 +392,8 @@ def assignments_page():
         joinedload(PendingStores.city),
         joinedload(PendingStores.province)
     ).filter(
-        PendingStores.supervisor_id == session['user_id'],
-        PendingStores.status == 'PENDING'
+        PendingStores.supervisor_id == supervisor_id,
+        PendingStores.status == PENDING_STATUS
     ).all()
     
     return render_template('assignments.html',
@@ -303,21 +402,14 @@ def assignments_page():
 
 
 @dashboard_bp.route('/admin/approvals')
-def admin_approvals_page():
-    """Admin interface for approving pending assignments"""
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
+@require_admin
+def admin_approvals_page() -> str:
+    """
+    Admin interface for approving pending assignments.
     
-    # Check if user is admin (you may need to adjust this based on your user type logic)
-    from ..extensions import db
-    from ..models import User
-    
-    user = db.session.query(User).filter_by(id=session['user_id']).first()
-    
-    # Check if user is admin (adjust this condition based on your user_type logic)
-    if not user or user.user_type_id != 1:  # Assuming 1 is admin
-        return redirect(url_for('dashboard.dashboard'))
-    
+    Returns:
+        Rendered admin approvals template for managing pending items.
+    """
     return render_template('admin_approvals.html')
 
 

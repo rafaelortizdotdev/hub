@@ -240,8 +240,12 @@
                         const option = e.target.options[e.target.selectedIndex];
                         this.storeType = option.dataset.storeType;
                         this.storeId = option.dataset.storeId;
+                        this.showInterface();
                         this.loadData();
                     } else {
+                        // Store deselected - reset everything
+                        this.storeType = null;
+                        this.storeId = null;
                         this.hideInterface();
                     }
                 });
@@ -250,7 +254,16 @@
                 document.querySelectorAll('.role-tab').forEach(tab => {
                     tab.addEventListener('click', (e) => {
                         const newRole = e.target.dataset.role;
-                        if (this.role !== newRole && this.storeId) {
+                        // Only switch if store is selected
+                        if (!this.storeId) {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'No Store Selected',
+                                text: 'Please select a store first'
+                            });
+                            return;
+                        }
+                        if (this.role !== newRole) {
                             this.switchRole(newRole);
                         }
                     });
@@ -471,7 +484,9 @@
                     } else if (assignment.isPendingChange) {
                         dateText = 'To be submitted';
                     } else {
-                        dateText = `Assigned: ${new Date(assignment.assigned_date).toLocaleDateString()}`;
+                        // Format date in user's local timezone
+                        const date = new Date(assignment.assigned_date);
+                        dateText = `Assigned: ${date.toLocaleDateString()} ${date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}`;
                     }
                     
                     return `
@@ -752,6 +767,14 @@
             hideInterface() {
                 document.getElementById('assignmentInterface').classList.add('hidden');
                 document.getElementById('emptyState').classList.remove('hidden');
+                
+                // Clear data
+                this.availableStaff = [];
+                this.assignedStaff = [];
+                this.selectedAvailable.clear();
+                this.selectedAssigned.clear();
+                this.pendingChanges = { toAssign: [], toUnassign: [] };
+                this.staffCache = {};
             }
         }
 
