@@ -4,7 +4,7 @@ Complete documentation for the Store Assignment Management System.
 
 ---
 
-## 📚 Documentation Index
+## Documentation Index
 
 ### Main Documents
 
@@ -27,7 +27,7 @@ Complete documentation for the Store Assignment Management System.
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### For Developers
 1. Read `DESIGN.md` to understand the architecture
@@ -42,9 +42,9 @@ Complete documentation for the Store Assignment Management System.
 
 ---
 
-## 📋 Current Status
+## Current Status
 
-### ✅ Phase 1 Complete
+### Phase 1 Complete
 - Store/Salesman creation forms
 - Dual-list assignment manager
 - Admin approval interface
@@ -52,7 +52,7 @@ Complete documentation for the Store Assignment Management System.
 - Input validation
 - Contextual user feedback
 
-### 🔄 Phase 2 Planned
+### Phase 2 Planned
 - ERP template generation
 - Excel import/export
 - Notification system
@@ -60,7 +60,7 @@ Complete documentation for the Store Assignment Management System.
 
 ---
 
-## 🔧 Technical Stack
+## Technical Stack
 
 - **Backend:** Flask + SQLAlchemy
 - **Frontend:** Vanilla JavaScript + Tailwind CSS
@@ -69,7 +69,7 @@ Complete documentation for the Store Assignment Management System.
 
 ---
 
-## 📁 File Structure
+## File Structure
 
 ```
 docs/
@@ -93,7 +93,7 @@ app/
 
 ---
 
-## 🐛 Reporting Issues
+## Reporting Issues
 
 When reporting issues, please include:
 1. What you were trying to do

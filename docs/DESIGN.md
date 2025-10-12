@@ -334,21 +334,21 @@ Response:
 │  Changes: 1 to assign, 1 to cancel                         │
 │  [Cancel] [Submit for Approval]                            │
 │                                                             │
-│  ⚠️ Changes require admin approval                          │
+│   Changes require admin approval                          │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ### Visual States
 
 #### Status Badges:
-- 🟡 **PENDING** (Yellow) - Awaiting admin approval
-- 🔵 **APPROVED** (Blue) - Active assignment
-- 🔴 **REJECTED** (Red) - Rejected by admin
+-  **PENDING** (Yellow) - Awaiting admin approval
+-  **APPROVED** (Blue) - Active assignment
+-  **REJECTED** (Red) - Rejected by admin
 
 #### Action Badges:
-- 🟠 **To Cancel** (Orange) - Cancelling pending request (no approval needed)
-- 🔴 **To Remove** (Red) - Removing approved assignment (needs approval)
-- ⚪ **To be submitted** (Gray) - Local change not yet saved
+-  **To Cancel** (Orange) - Cancelling pending request (no approval needed)
+-  **To Remove** (Red) - Removing approved assignment (needs approval)
+-  **To be submitted** (Gray) - Local change not yet saved
 
 ### User Flows
 
@@ -456,29 +456,29 @@ Response:
 ## Design Decisions
 
 ### Why Polymorphic Assignments?
-✅ Support both active and pending entities  
-✅ No need for separate tables per entity type  
-✅ Flexible for future entity types  
-✅ Single source of truth for assignments  
+ Support both active and pending entities  
+ No need for separate tables per entity type  
+ Flexible for future entity types  
+ Single source of truth for assignments  
 
 ### Why Dual-List UI?
-✅ Industry standard (SAP, Salesforce)  
-✅ Excellent for bulk operations  
-✅ Clear visual feedback  
-✅ Familiar to users  
-✅ One screen = one task  
+ Industry standard (SAP, Salesforce)  
+ Excellent for bulk operations  
+ Clear visual feedback  
+ Familiar to users  
+ One screen = one task  
 
 ### Why Approval Workflow?
-✅ Business requirement (admin oversight)  
-✅ Audit trail  
-✅ Error prevention  
-✅ Integration with ERP process  
+ Business requirement (admin oversight)  
+ Audit trail  
+ Error prevention  
+ Integration with ERP process  
 
 ### Why Service Layer?
-✅ Single Responsibility Principle  
-✅ Easy to test  
-✅ Reusable business logic  
-✅ Clean separation of concerns  
+ Single Responsibility Principle  
+ Easy to test  
+ Reusable business logic  
+ Clean separation of concerns  
 
 ---
 
