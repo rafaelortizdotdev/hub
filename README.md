@@ -244,5 +244,5 @@ Internal HONOR system - Authorized use only.
 
 ---
 
-**Built with love for Data Engineering Excellence**
+**Built with love for Data Engineering Excellence.**
 **This was built to satisfy a real world scenario problem**
