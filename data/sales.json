@@ -1,0 +1,32 @@
+[
+  {
+    "store_id": "ASVC1234",
+    "month": 1,
+    "year": 2021,
+    "item_id": 2
+  },
+  {
+    "store_id": "ASVC1234",
+    "month": 10,
+    "year": 2025,
+    "item_id": 1
+  },
+  {
+    "store_id": "ASVC1234",
+    "month": 1,
+    "year": 2025,
+    "item_id": 1
+  },
+  {
+    "store_id": "ASVC1234",
+    "month": 1,
+    "year": 2025,
+    "item_id": 1
+  },
+  {
+    "store_id": "ASVC1234",
+    "month": 1,
+    "year": 2025,
+    "item_id": 1
+  }
+]

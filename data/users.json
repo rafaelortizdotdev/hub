@@ -1,0 +1,30 @@
+[
+  {
+    "id": "ts1234",
+    "name": "Test Supervisor",
+    "position_id": "1",
+    "user_type_id": 1,
+    "supervisor_id": "1",
+    "region": 1,
+    "phone": "1234567890",
+    "entry_date": "2021-01-01",
+    "exit_date": null,
+    "status": "ACTIVE",
+    "password_hash": "honor1##",
+    "is_first_login": null
+  },
+  {
+    "id": "ts1235",
+    "name": "Test Promoter",
+    "position_id": "2",
+    "user_type_id": 2,
+    "supervisor_id": "1",
+    "region": 1,
+    "phone": "1234567890",
+    "entry_date": "2021-01-01",
+    "exit_date": null,
+    "status": "ACTIVE",
+    "password_hash": "honor1##",
+    "is_first_login": null
+  }
+]

@@ -1,0 +1,28 @@
+[
+  {
+    "id": "ASVC1234",
+    "store_name": "Test Store 1",
+    "province_id": 1,
+    "company_id": 1,
+    "city_id": 1,
+    "market_center_id": 1,
+    "supervisor_id": "ts1234",
+    "status": "ACTIVE",
+    "street": "Test Street",
+    "level": "Level 1",
+    "local": "Local 1"
+  },
+  {
+    "id": "ASVC1235",
+    "store_name": "Test Store 2",
+    "province_id": 1,
+    "company_id": 1,
+    "city_id": 1,
+    "market_center_id": 1,
+    "supervisor_id": "ts1234",
+    "status": "ACTIVE",
+    "street": "Test Street",
+    "level": "Level 1",
+    "local": "Local 1"
+  }
+]
