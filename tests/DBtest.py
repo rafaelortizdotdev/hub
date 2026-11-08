@@ -15,7 +15,7 @@ class DatabaseInspector:
     
     def _get_connection(self):
         """Get database connection within app context"""
-        db_path = os.path.join(current_app.instance_path, 'honor_hub.db')
+        db_path = os.path.join(current_app.instance_path, 'supervisor_hub.db')
         conn = sqlite3.connect(db_path)
         conn.row_factory = sqlite3.Row
         return conn

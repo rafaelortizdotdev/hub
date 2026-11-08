@@ -5,26 +5,26 @@
     "position_id": "1",
     "user_type_id": 1,
     "supervisor_id": "1",
-    "region": 1,
+    "region_id": 1,
     "phone": "1234567890",
     "entry_date": "2021-01-01",
     "exit_date": null,
     "status": "ACTIVE",
-    "password_hash": "honor1##",
-    "is_first_login": null
+    "password_hash": "scrypt:32768:8:1$rWqcieZ63C7MPnQr$85f243f42fc037335f0d329242f30866e2577f6dd62db565370c323ff9cc04c0ebc24acb6808158a228debe597532ae051b0a822bc6a06026699011bb310837f",
+    "is_first_login": false
   },
   {
     "id": "ts1235",
     "name": "Test Promoter",
     "position_id": "2",
     "user_type_id": 2,
-    "supervisor_id": "1",
-    "region": 1,
+    "supervisor_id": "ts1234",
+    "region_id": 1,
     "phone": "1234567890",
     "entry_date": "2021-01-01",
     "exit_date": null,
     "status": "ACTIVE",
-    "password_hash": "honor1##",
-    "is_first_login": null
+    "password_hash": "scrypt:32768:8:1$rWqcieZ63C7MPnQr$85f243f42fc037335f0d329242f30866e2577f6dd62db565370c323ff9cc04c0ebc24acb6808158a228debe597532ae051b0a822bc6a06026699011bb310837f",
+    "is_first_login": true
   }
 ]

@@ -1,5 +1,7 @@
 import os
+import secrets
 import click
+from datetime import timedelta
 from flask import Flask
 from flask_migrate import Migrate
 from .extensions import db
@@ -7,15 +9,22 @@ from .extensions import db
 
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
-    app.secret_key = os.getenv('SECRET_KEY', 'SECRET_KEY')  # Load from env in production
+    app.secret_key = os.getenv('SECRET_KEY') or secrets.token_hex(32)
     os.makedirs(app.instance_path, exist_ok=True)
+
+    app.config.update(
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SAMESITE='Lax',
+        PERMANENT_SESSION_LIFETIME=timedelta(hours=8),
+        MAX_CONTENT_LENGTH=2 * 1024 * 1024,
+    )
 
     # Database URI: default to SQLite in instance/ unless DATABASE_URL provided
     database_url = os.getenv('DATABASE_URL')
     if database_url:
         app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     else:
-        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(app.instance_path, 'honor_hub.db')
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(app.instance_path, 'supervisor_hub.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     # Init extensions
@@ -315,5 +324,80 @@ def create_app():
             click.echo("Templates reset to neutral state.")
         elif keep:
             click.echo("Templates kept as-is (no reset). Archive created.")
+
+    # Security headers
+    @app.after_request
+    def set_security_headers(response):
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'DENY'
+        response.headers['Referrer-Policy'] = 'same-origin'
+        return response
+
+    # Error handlers
+    @app.errorhandler(404)
+    def not_found(e):
+        from flask import render_template_string
+        return render_template_string('''<!DOCTYPE html>
+<html><head><title>404 - Supervisor Hub</title>
+<script src="/static/js/tailwind.js"></script></head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center">
+<div class="text-center"><h1 class="text-6xl font-bold text-gray-300">404</h1>
+<p class="text-lg text-gray-600 mt-4">Página no encontrada</p>
+<a href="/" class="mt-6 inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Volver al inicio</a>
+</div></body></html>'''), 404
+
+    @app.errorhandler(500)
+    def server_error(e):
+        from flask import render_template_string
+        return render_template_string('''<!DOCTYPE html>
+<html><head><title>500 - Supervisor Hub</title>
+<script src="/static/js/tailwind.js"></script></head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center">
+<div class="text-center"><h1 class="text-6xl font-bold text-gray-300">500</h1>
+<p class="text-lg text-gray-600 mt-4">Error interno del servidor</p>
+<a href="/" class="mt-6 inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Volver al inicio</a>
+</div></body></html>'''), 500
+
+    @app.cli.command("create-user")
+    @click.argument('user_id')
+    @click.argument('name')
+    @click.argument('password')
+    @click.option('--user-type', default=1, help='User type ID (1=ADMIN, 2=PROMOTER, etc.)')
+    def create_user(user_id, name, password, user_type):
+        """Create a user with a hashed password."""
+        from werkzeug.security import generate_password_hash
+        from .models import User
+        existing = db.session.query(User).filter_by(id=user_id).first()
+        if existing:
+            click.echo(f"User '{user_id}' already exists. Updating password.")
+            existing.password_hash = generate_password_hash(password)
+            existing.name = name
+            db.session.commit()
+        else:
+            user = User(
+                id=user_id,
+                name=name,
+                password_hash=generate_password_hash(password),
+                user_type_id=user_type,
+                is_first_login=False
+            )
+            db.session.add(user)
+            db.session.commit()
+            click.echo(f"User '{user_id}' created.")
+
+    @app.cli.command("hash-passwords")
+    def hash_passwords():
+        """Migrate existing plaintext passwords to hashed passwords."""
+        from werkzeug.security import generate_password_hash, check_password_hash
+        from .models import User
+        users = db.session.query(User).all()
+        migrated = 0
+        for user in users:
+            if not user.password_hash or not user.password_hash.startswith(('scrypt:', 'pbkdf2:')):
+                raw = user.password_hash or 'changeme'
+                user.password_hash = generate_password_hash(raw)
+                migrated += 1
+        db.session.commit()
+        click.echo(f"Migrated {migrated} passwords to hashed format.")
 
     return app

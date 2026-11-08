@@ -16,7 +16,7 @@ class User(db.Model, TimestampMixin):
     position_id = db.Column(db.String)
     user_type_id = db.Column(db.Integer, db.ForeignKey('user_types.id'), nullable=False)
     supervisor_id = db.Column(db.String, db.ForeignKey('users.id'))
-    region = db.Column(db.Integer, db.ForeignKey('regions.id'))
+    region_id = db.Column(db.Integer, db.ForeignKey('regions.id'))
     phone = db.Column(db.String)
     entry_date = db.Column(db.Date)
     exit_date = db.Column(db.Date)
@@ -27,7 +27,7 @@ class User(db.Model, TimestampMixin):
     # Relationships
     user_type = db.relationship('UserType', lazy='joined', primaryjoin="User.user_type_id==UserType.id")
     supervisor = db.relationship('User', remote_side=[id], backref='subordinates')
-    region_rel = db.relationship('Region', lazy='joined', primaryjoin="User.region==Region.id")
+    region_rel = db.relationship('Region', lazy='joined', primaryjoin="User.region_id==Region.id")
 
 class UserType(db.Model, TimestampMixin):
     __tablename__ = 'user_types'
@@ -134,8 +134,9 @@ class Sales(db.Model, TimestampMixin):
     month = db.Column(db.Integer, nullable=False)
     year = db.Column(db.Integer, nullable=False)
     item_id = db.Column(db.Integer, db.ForeignKey('items.id'), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False, default=1)
     # Relationships
-    store = db.relationship('Stores', lazy='joined', primaryjoin="Sales.store_id==Stores.id")
+    store = db.relationship('Stores', lazy='joined', primaryjoin="Sales.store_id==Stores.id", overlaps="sales,store_ref")
     item = db.relationship('ItemModel', lazy='joined', primaryjoin="Sales.item_id==ItemModel.id")
 
 class ItemModel(db.Model, TimestampMixin):
@@ -186,13 +187,16 @@ class StoreAssignment(db.Model, TimestampMixin):
     supervisor = db.relationship('User', foreign_keys=[supervisor_id], backref='supervised_assignments')
     approver = db.relationship('User', foreign_keys=[approved_by], backref='approved_assignments')
     
-    # Indexes for performance
+    # Indexes and constraints
     __table_args__ = (
         db.Index('idx_staff', 'staff_type', 'staff_id'),
         db.Index('idx_store', 'store_type', 'store_id'),
         db.Index('idx_role', 'role'),
         db.Index('idx_status', 'status'),
         db.Index('idx_supervisor', 'supervisor_id'),
+        db.CheckConstraint("staff_type IN ('user', 'pending_client')", name='ck_valid_staff_type'),
+        db.CheckConstraint("store_type IN ('store', 'pending_store')", name='ck_valid_store_type'),
+        db.CheckConstraint("status IN ('PENDING', 'APPROVED', 'ACTIVE', 'REJECTED')", name='ck_valid_assignment_status'),
     )
 
 

@@ -2,9 +2,9 @@
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <title>HONOR Supervisor Hub - Login</title>
+  <script src="{{ url_for('static', filename='js/tailwind.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/sweetalert2.js') }}"></script>
+  <title>Supervisor Hub - Login</title>
   <style>
     input { font-size: 16px; }
     .swal2-popup { font-size: 0.95rem; }
@@ -14,7 +14,7 @@
   <div class="flex-1 w-full flex items-center justify-center p-4">
     <div class="w-full max-w-md bg-white rounded-xl shadow-md p-6">
     <div class="text-center mb-6">
-      <h1 class="text-3xl font-bold text-blue-600 mb-2">HONOR Supervisor Hub</h1>
+      <h1 class="text-3xl font-bold text-blue-600 mb-2">Supervisor Hub</h1>
     </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -29,23 +29,23 @@
 
     <form method="POST" class="space-y-6">
       <div>
-        <label for="id" class="block text-sm font-medium text-gray-700 mb-1">ID de Honor</label>
-        <input type="text" id="id" name="id" 
-               placeholder="Ingresa tu ID de Honor"
+        <label for="id" class="block text-sm font-medium text-gray-700 mb-1">ID de Empleado</label>
+        <input type="text" id="id" name="id"
+               placeholder="Ingresa tu ID de empleado"
                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                required>
-        <p class="text-xs text-gray-500 mt-1">Ingresa tu ID de Honor único (ej: aw0000)</p>
+        <p class="text-xs text-gray-500 mt-1">Ingresa tu ID único (ej: aw0000)</p>
       </div>
 
       <div>
         <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
-        <input type="password" id="password" name="password" 
+        <input type="password" id="password" name="password"
                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                required>
       </div>
 
       <div class="flex items-center justify-between">
-        <button type="submit" 
+        <button type="submit"
                 class="w-full py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
           Iniciar Sesión
         </button>
@@ -54,50 +54,41 @@
     </div>
   </div>
 
-  <!-- Footer -->
   <footer class="mt-auto w-full text-center text-xs text-gray-500 py-4">
-    <div>© HONOR Venezuela 2023–2025. Todos los derechos reservados.</div>
+    <div>Supervisor Hub &mdash; Sistema de Gestión de Asignaciones Retail</div>
   </footer>
 
   <script>
-    const Toast = Swal.mixin({ 
-      toast: true, 
-      position: 'top-end', 
-      showConfirmButton: false, 
-      timer: 3500, 
-      timerProgressBar: true 
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      showConfirmButton: false,
+      timer: 3500,
+      timerProgressBar: true
     });
 
-    // Auto-focus on id field
     document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('id').focus();
     });
 
-    // Form validation
     document.querySelector('form').addEventListener('submit', function(e) {
-      const honorId = document.getElementById('id').value.trim();
+      const userId = document.getElementById('id').value.trim();
       const password = document.getElementById('password').value.trim();
-      
-      if (!honorId) {
+
+      if (!userId) {
         e.preventDefault();
-        Toast.fire({ icon: 'error', title: 'Por favor ingresa tu ID de Honor' });
+        Toast.fire({ icon: 'error', title: 'Por favor ingresa tu ID de empleado' });
         document.getElementById('id').focus();
         return;
       }
-      
+
       if (!password) {
         e.preventDefault();
         Toast.fire({ icon: 'error', title: 'Por favor ingresa tu contraseña' });
         document.getElementById('password').focus();
         return;
       }
-      
-      // Keep original case - we'll handle case-insensitive search on the server
-      
-      // No format validation - just check if ID exists in database
-      // The server will validate if the ID exists and belongs to a supervisor
     });
   </script>
 </body>
 </html>
-

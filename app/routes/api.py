@@ -1,6 +1,9 @@
 from flask import Blueprint, jsonify, request, session
-import random
+import re
+import secrets
 import string
+
+from werkzeug.security import generate_password_hash
 
 from ..database import get_db_connection
 from ..extensions import db
@@ -74,8 +77,9 @@ class StoreCodeService:
     @staticmethod
     def generate():
         """Generate a unique store code"""
+        charset = string.ascii_uppercase + string.digits
         while True:
-            code = 'ST-' + ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
+            code = 'ST-' + ''.join(secrets.choice(charset) for _ in range(5))
             existing = db.session.query(Stores).filter_by(id=code).first()
             if not existing:
                 return code
@@ -86,9 +90,64 @@ class StoreCodeService:
         return db.session.query(Stores).filter_by(id=code).first() is not None
 
 
+class GeographyService:
+    @staticmethod
+    def validate_province_consistency(city_id, province_id):
+        """Ensure province_id matches the province of the given city."""
+        city = db.session.query(City).filter_by(id=city_id).first()
+        if not city:
+            raise ValueError(f"Ciudad con id={city_id} no existe")
+        if city.province_id != province_id:
+            raise ValueError(
+                f"Inconsistencia geográfica: la ciudad {city.name} pertenece a la provincia "
+                f"id={city.province_id}, no a id={province_id}"
+            )
+
+
 class AssignmentService:
     """Service for managing store assignments with approval workflow"""
-    
+
+    @staticmethod
+    def has_active_assignments(staff_type, staff_id):
+        """Check if a staff member has non-rejected assignments."""
+        return db.session.query(StoreAssignment).filter(
+            StoreAssignment.staff_type == staff_type,
+            StoreAssignment.staff_id == str(staff_id),
+            StoreAssignment.status.in_(['PENDING', 'APPROVED', 'ACTIVE'])
+        ).count() > 0
+
+    @staticmethod
+    def has_store_assignments(store_type, store_id):
+        """Check if a store has non-rejected assignments."""
+        return db.session.query(StoreAssignment).filter(
+            StoreAssignment.store_type == store_type,
+            StoreAssignment.store_id == str(store_id),
+            StoreAssignment.status.in_(['PENDING', 'APPROVED', 'ACTIVE'])
+        ).count() > 0
+
+    @staticmethod
+    def migrate_pending_to_active(old_type, old_id, new_type, new_id, column):
+        """Update assignments when a pending entity gets approved.
+        column is either 'staff' or 'store'."""
+        if column == 'staff':
+            db.session.query(StoreAssignment).filter(
+                StoreAssignment.staff_type == old_type,
+                StoreAssignment.staff_id == str(old_id),
+                StoreAssignment.status.in_(['PENDING', 'APPROVED', 'ACTIVE'])
+            ).update({
+                'staff_type': new_type,
+                'staff_id': str(new_id),
+            }, synchronize_session=False)
+        elif column == 'store':
+            db.session.query(StoreAssignment).filter(
+                StoreAssignment.store_type == old_type,
+                StoreAssignment.store_id == str(old_id),
+                StoreAssignment.status.in_(['PENDING', 'APPROVED', 'ACTIVE'])
+            ).update({
+                'store_type': new_type,
+                'store_id': str(new_id),
+            }, synchronize_session=False)
+
     @staticmethod
     def get_store_assignments(store_type, store_id, role, status='APPROVED'):
         """Get all assignments for a store by role and status
@@ -133,16 +192,12 @@ class AssignmentService:
         # PROMOTER -> user_type_id 2 (PROMOTER)
         user_type_filter = 2 if role == 'PROMOTER' else 4
         
-        print(f"[DEBUG] get_available_staff - role: {role}, user_type_filter: {user_type_filter}")
-        
         # Get active users filtered by user_type
         users = db.session.query(User).filter_by(
             supervisor_id=supervisor_id,
             status='ACTIVE',
             user_type_id=user_type_filter
         ).all()
-        
-        print(f"[DEBUG] Found {len(users)} users with user_type_id={user_type_filter}")
         
         for user in users:
             if ('user', user.id) not in assigned_pairs:
@@ -170,10 +225,8 @@ class AssignmentService:
                 status='PENDING'
             ).all()
             
-            print(f"[DEBUG] Found {len(pending_clients)} pending clients")
         else:
             pending_clients = []
-            print(f"[DEBUG] Skipping pending clients for PROMOTER role")
         
         for client in pending_clients:
             if ('pending_client', str(client.id)) not in assigned_pairs:
@@ -235,14 +288,14 @@ class AssignmentService:
     
     @staticmethod
     def bulk_remove_assignments(assignment_ids, supervisor_id):
-        """Mark assignments for removal (create PENDING removal records)"""
-        # For now, just delete them directly
-        # In production, you might want to create "removal requests"
+        """Remove PENDING assignments (direct delete) or reject APPROVED ones."""
+        # Only allow removing own PENDING assignments directly
         deleted = db.session.query(StoreAssignment).filter(
             StoreAssignment.id.in_(assignment_ids),
-            StoreAssignment.supervisor_id == supervisor_id
+            StoreAssignment.supervisor_id == supervisor_id,
+            StoreAssignment.status == 'PENDING'
         ).delete(synchronize_session=False)
-        
+
         db.session.commit()
         return deleted
     
@@ -517,19 +570,25 @@ def approve_store(store_id):
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
 
-    try:
-        # Find the pending store with relationships
-        pending_store = db.session.query(PendingStores).filter_by(
-            id=store_id, 
-            supervisor_id=session['user_id']
-        ).first()
-        
-        if not pending_store:
-            return jsonify({'error': 'Store not found'}), 404
+    user = db.session.query(User).filter_by(id=session['user_id']).first()
+    if not user or user.user_type_id != 1:
+        return jsonify({'error': 'Solo administradores pueden aprobar'}), 403
 
-        # Create the actual store record
+    try:
+        pending_store = db.session.query(PendingStores).filter_by(
+            id=store_id,
+            status='PENDING'
+        ).first()
+
+        if not pending_store:
+            return jsonify({'error': 'Tienda no encontrada o ya aprobada'}), 404
+
+        GeographyService.validate_province_consistency(
+            pending_store.city_id, pending_store.province_id
+        )
+
         new_store = Stores(
-            id=pending_store.store_code,  # Use store_code as the store ID
+            id=pending_store.store_code,
             store_name=pending_store.store_name,
             province_id=pending_store.province_id,
             company_id=pending_store.company_id,
@@ -541,14 +600,21 @@ def approve_store(store_id):
             local=pending_store.local,
             status='ACTIVE'
         )
-        
+
         db.session.add(new_store)
-        
-        # Mark pending store as approved
         pending_store.status = 'APPROVED'
-        
+
+        AssignmentService.migrate_pending_to_active(
+            'pending_store', str(store_id),
+            'store', pending_store.store_code,
+            column='store'
+        )
+
         db.session.commit()
-        return jsonify({'success': True, 'message': 'Store approved successfully'})
+        return jsonify({'success': True, 'message': 'Tienda aprobada exitosamente'})
+    except ValueError as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
@@ -559,23 +625,47 @@ def approve_client(client_id):
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
 
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        client = cursor.execute(
-            'SELECT * FROM pending_clients WHERE id = ? AND supervisor_id = ?',
-            (client_id, session['user_id']),
-        ).fetchone()
-        if not client:
-            return jsonify({'error': 'Client not found'}), 404
+    user = db.session.query(User).filter_by(id=session['user_id']).first()
+    if not user or user.user_type_id != 1:
+        return jsonify({'error': 'Solo administradores pueden aprobar'}), 403
 
-        cursor.execute(
-            'UPDATE pending_clients SET status = "APPROVED" WHERE id = ?', (client_id,)
+    try:
+        client = db.session.query(PendingClients).filter_by(
+            id=client_id,
+            status='PENDING'
+        ).first()
+        if not client:
+            return jsonify({'error': 'Vendedor no encontrado o ya aprobado'}), 404
+
+        temp_password = secrets.token_urlsafe(12)
+        new_user = User(
+            id=client.client_id,
+            name=client.name,
+            user_type_id=4,
+            supervisor_id=client.supervisor_id,
+            region_id=None,
+            phone=client.contact_number,
+            password_hash=generate_password_hash(temp_password),
+            is_first_login=True,
+            status='ACTIVE'
         )
-        conn.commit()
-        conn.close()
-        return jsonify({'success': True, 'message': 'Client approved successfully'})
+        db.session.add(new_user)
+        client.status = 'APPROVED'
+
+        AssignmentService.migrate_pending_to_active(
+            'pending_client', str(client_id),
+            'user', client.client_id,
+            column='staff'
+        )
+
+        db.session.commit()
+        return jsonify({
+            'success': True,
+            'message': f'Cliente aprobado. Contraseña temporal: {temp_password}',
+            'temp_password': temp_password
+        })
     except Exception as e:
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
 
@@ -587,8 +677,28 @@ def create_store():
         return jsonify({'error': 'Unauthorized'}), 401
 
     try:
-        data = request.get_json()
-        
+        data = request.get_json(silent=True)
+        if not data or not isinstance(data, dict):
+            return jsonify({'error': 'Datos JSON requeridos'}), 400
+
+        required = ['store_name', 'company', 'province', 'city', 'market_center', 'street', 'level', 'local']
+        missing = [f for f in required if not data.get(f, '').strip()]
+        if missing:
+            return jsonify({'error': f'Campos requeridos: {", ".join(missing)}'}), 400
+
+        MAX_LEN = 150
+        for field in required:
+            if len(data[field].strip()) > MAX_LEN:
+                return jsonify({'error': f'{field} excede {MAX_LEN} caracteres'}), 400
+
+        existing = db.session.query(PendingStores).filter_by(
+            store_name=data['store_name'].strip(),
+            supervisor_id=session['user_id'],
+            status='PENDING'
+        ).first()
+        if existing:
+            return jsonify({'error': 'Ya existe una tienda pendiente con ese nombre'}), 409
+
         # Find or create company
         company = CompanyService.find_by_name(data['company'])
         if not company:
@@ -632,7 +742,7 @@ def create_store():
         
         return jsonify({
             'success': True,
-            'message': 'Store created and pending approval',
+            'message': 'Tienda creada y pendiente de aprobación',
             'store_id': pending_store.id,
             'store_code': store_code
         })
@@ -647,19 +757,38 @@ def create_salesman():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
 
-    try:
-        data = request.get_json()
+    data = request.get_json(silent=True)
+    if not data or not isinstance(data, dict):
+        return jsonify({'error': 'Datos JSON requeridos'}), 400
 
+    required = ['name', 'client_id', 'gender', 'contact_number', 'province', 'city']
+    missing = [f for f in required if not str(data.get(f, '')).strip()]
+    if missing:
+        return jsonify({'error': f'Campos requeridos: {", ".join(missing)}'}), 400
+
+    MAX_LEN = 150
+    for field in required:
+        if len(str(data[field]).strip()) > MAX_LEN:
+            return jsonify({'error': f'{field} excede {MAX_LEN} caracteres'}), 400
+
+    existing = db.session.query(PendingClients).filter_by(
+        client_id=data['client_id'].strip(),
+        status='PENDING'
+    ).first()
+    if existing:
+        return jsonify({'error': 'Ya existe un vendedor pendiente con esa cédula'}), 409
+
+    try:
         # Find or create province
         province = ProvinceService.find_by_name(data['province'])
         if not province:
             province = ProvinceService.create(data['province'])
-        
+
         # Find or create city
         city = CityService.find_by_name_and_province(data['city'], province.id)
         if not city:
             city = CityService.create(data['city'], province.id)
-        
+
         # Create pending client
         pending_client = PendingClients(
             name=data['name'],
@@ -672,18 +801,18 @@ def create_salesman():
             supervisor_id=session['user_id'],
             status='PENDING'
         )
-        
+
         db.session.add(pending_client)
         db.session.commit()
-        
+
         return jsonify({
             'success': True,
-            'message': 'Salesman created and pending approval',
+            'message': 'Vendedor creado y pendiente de aprobación',
             'salesman_id': pending_client.id
         })
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Error interno al crear vendedor'}), 500
 
 
 # Assignment Management Endpoints
@@ -758,10 +887,23 @@ def bulk_assign():
         role = data.get('role', 'SALESMAN')
         assign_list = data.get('assign', [])
         unassign_ids = data.get('unassign', [])
-        
+
         if not store_id:
             return jsonify({'error': 'store_id required', 'field': 'store_id'}), 400
-        
+
+        if store_type not in ('store', 'pending_store'):
+            return jsonify({'error': 'Invalid store_type'}), 400
+        if role not in ('SALESMAN', 'PROMOTER'):
+            return jsonify({'error': 'Invalid role'}), 400
+
+        # Verify store ownership
+        if store_type == 'store':
+            owned = db.session.query(Stores).filter_by(id=store_id, supervisor_id=session['user_id']).first()
+        else:
+            owned = db.session.query(PendingStores).filter_by(id=int(store_id), supervisor_id=session['user_id']).first()
+        if not owned:
+            return jsonify({'error': 'Tienda no encontrada o sin permisos'}), 403
+
         # Validate assign_list format
         if assign_list:
             for idx, staff in enumerate(assign_list):
@@ -805,14 +947,9 @@ def bulk_assign():
             'field': str(e),
             'details': 'Check that all staff objects have required fields'
         }), 400
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        import traceback
-        return jsonify({
-            'error': str(e),
-            'type': type(e).__name__,
-            'traceback': traceback.format_exc()
-        }), 500
+        return jsonify({'error': 'Error interno al procesar asignaciones'}), 500
 
 
 # Admin Assignment Endpoints
@@ -964,7 +1101,7 @@ def reject_assignments():
     try:
         data = request.get_json()
         assignment_ids = data.get('assignment_ids', [])
-        reason = data.get('reason', 'No reason provided')
+        reason = data.get('rejection_reason') or data.get('reason') or 'No reason provided'
         
         if not assignment_ids:
             return jsonify({'error': 'assignment_ids required'}), 400

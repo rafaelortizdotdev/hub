@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Approvals - HONOR Hub</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <title>Admin Approvals - Supervisor Hub</title>
+    <script src="{{ url_for('static', filename='js/tailwind.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/sweetalert2.js') }}"></script>
     <style>
         .badge {
             display: inline-block;
@@ -47,7 +47,7 @@
     <nav class="bg-white shadow-sm border-b">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
-                <h1 class="text-xl font-semibold text-gray-900">HONOR Hub - Admin Approvals</h1>
+                <h1 class="text-xl font-semibold text-gray-900">Supervisor Hub - Aprobaciones</h1>
                 <a href="{{ url_for('dashboard.dashboard') }}" class="text-blue-600 hover:text-blue-800">← Back to Dashboard</a>
             </div>
         </div>
@@ -160,6 +160,8 @@
     </div>
 
     <script>
+        const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
         class AdminApprovalManager {
             constructor() {
                 this.currentStatus = 'PENDING';
@@ -255,8 +257,8 @@
                                 
                                 <div class="flex-1">
                                     <div class="flex items-center space-x-3 mb-2">
-                                        <h4 class="text-lg font-semibold text-gray-900">${assignment.staff_name}</h4>
-                                        <span class="badge badge-${assignment.role.toLowerCase()}">${assignment.role}</span>
+                                        <h4 class="text-lg font-semibold text-gray-900">${esc(assignment.staff_name)}</h4>
+                                        <span class="badge badge-${esc(assignment.role).toLowerCase()}">${esc(assignment.role)}</span>
                                         ${assignment.status !== 'PENDING' ? `
                                         <span class="badge ${assignment.status === 'APPROVED' ? 'badge-pending' : 'bg-red-100 text-red-800'}">${assignment.status}</span>
                                         ` : ''}
@@ -265,11 +267,11 @@
                                     <div class="grid grid-cols-2 gap-4 text-sm">
                                         <div>
                                             <span class="text-gray-500">Store:</span>
-                                            <span class="font-medium text-gray-900">${assignment.store_name}</span>
+                                            <span class="font-medium text-gray-900">${esc(assignment.store_name)}</span>
                                         </div>
                                         <div>
                                             <span class="text-gray-500">Supervisor:</span>
-                                            <span class="font-medium text-gray-900">${assignment.supervisor_name}</span>
+                                            <span class="font-medium text-gray-900">${esc(assignment.supervisor_name)}</span>
                                         </div>
                                         <div>
                                             <span class="text-gray-500">Requested:</span>
@@ -284,14 +286,14 @@
                                     ${assignment.rejection_reason ? `
                                     <div class="mt-3 p-3 bg-red-50 border border-red-200 rounded">
                                         <p class="text-sm text-red-800">
-                                            <strong>Rejection Reason:</strong> ${assignment.rejection_reason}
+                                            <strong>Rejection Reason:</strong> ${esc(assignment.rejection_reason)}
                                         </p>
                                     </div>
                                     ` : ''}
 
                                     ${assignment.approved_date ? `
                                     <div class="mt-2 text-sm text-gray-500">
-                                        ${assignment.status} by ${assignment.approver_name || 'Admin'} on ${new Date(assignment.approved_date).toLocaleString()}
+                                        ${esc(assignment.status)} by ${esc(assignment.approver_name || 'Admin')} on ${new Date(assignment.approved_date).toLocaleString()}
                                     </div>
                                     ` : ''}
                                 </div>

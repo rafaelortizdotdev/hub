@@ -1,31 +1,16 @@
-"""
-Dashboard routes for the HONOR Supervisor Hub.
+"""Dashboard routes for Supervisor Hub."""
 
-This module provides all dashboard-related functionality including:
-- Main supervisor dashboard with stores, team members, and pending items
-- Store and salesman creation forms
-- Assignment management interface
-- Admin approval interface
-- Debug API endpoints
-
-Key Features:
-- Consistent SQLAlchemy ORM usage with optimized queries
-- Proper authentication and authorization decorators
-- Type hints and comprehensive docstrings
-- Efficient data conversion and template preparation
-- Professional error handling patterns
-
-Author: HONOR Development Team
-Version: 1.0.0
-"""
-
+import csv
+import io
+from datetime import datetime
 from functools import wraps
-from typing import Dict, List, Optional, Any
-from flask import Blueprint, render_template, redirect, url_for, session, request, jsonify
+from typing import Dict, List, Any
+from flask import Blueprint, render_template, redirect, url_for, session, request, jsonify, make_response, flash
 from sqlalchemy.orm import joinedload
+from werkzeug.utils import secure_filename
 
-from ..database import get_db_connection
-from ..models import Stores, User, PendingStores, PendingClients
+from ..extensions import db
+from ..models import Stores, User, PendingStores, PendingClients, StoreAssignment, Sales, Region
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
@@ -137,10 +122,10 @@ def get_team_members_with_counts(supervisor_id: str) -> List[Dict[str, Any]]:
     team_members_data = []
     for member in team_members:
         member_dict = {
-            'honor_id': member.id,
+            'employee_id': member.id,
             'name': member.name,
             'position_id': member.position_id,
-            'region': member.region,
+            'region': member.region_id,
             'region_name': member.region_rel.name if member.region_rel else DEFAULT_NA_VALUE,
             'phone': member.phone,
             'status': member.status,
@@ -153,7 +138,7 @@ def get_team_members_with_counts(supervisor_id: str) -> List[Dict[str, Any]]:
     
     # Get store counts for each team member in a single optimized query
     if team_members_data:
-        member_ids = [str(member['honor_id']) for member in team_members_data]
+        member_ids = [str(member['employee_id']) for member in team_members_data]
         
         # Single query to get all store counts at once
         store_counts = db.session.query(
@@ -168,7 +153,7 @@ def get_team_members_with_counts(supervisor_id: str) -> List[Dict[str, Any]]:
         
         # Update team members with store counts
         for member in team_members_data:
-            member['store_count'] = int(store_counts_dict.get(str(member['honor_id']), 0))
+            member['store_count'] = int(store_counts_dict.get(str(member['employee_id']), 0))
     
     return team_members_data
 
@@ -233,6 +218,36 @@ def dashboard() -> str:
     # Calculate promoters count
     promoters_count = sum(1 for member in team_members if member.get('is_ambassador'))
 
+    # Operational indicators
+    pending_assignments = db.session.query(StoreAssignment).filter(
+        StoreAssignment.supervisor_id == supervisor_id,
+        StoreAssignment.status == 'PENDING'
+    ).count()
+
+    approved_not_synced = db.session.query(StoreAssignment).filter(
+        StoreAssignment.supervisor_id == supervisor_id,
+        StoreAssignment.status == 'APPROVED',
+        StoreAssignment.synced_to_erp == False
+    ).count()
+
+    now = datetime.utcnow()
+    total_sales_this_month = db.session.query(
+        db.func.coalesce(db.func.sum(Sales.quantity), 0)
+    ).join(Stores, Sales.store_id == Stores.id).filter(
+        Stores.supervisor_id == supervisor_id,
+        Sales.month == now.month,
+        Sales.year == now.year
+    ).scalar()
+
+    # Staff by region breakdown
+    staff_by_region = db.session.query(
+        Region.name,
+        db.func.count(User.id)
+    ).join(User, User.region_id == Region.id).filter(
+        User.supervisor_id == supervisor_id,
+        User.status == 'ACTIVE'
+    ).group_by(Region.name).all()
+
     return render_template(
         'dashboard.html',
         stores=stores_data,
@@ -240,75 +255,16 @@ def dashboard() -> str:
         promoters_count=promoters_count,
         pending_stores=pending_stores_data,
         pending_clients=pending_clients_data,
-        is_admin=is_admin
+        is_admin=is_admin,
+        pending_assignments=pending_assignments,
+        approved_not_synced=approved_not_synced,
+        total_sales_this_month=total_sales_this_month,
+        staff_by_region=staff_by_region,
+        current_month=now.month,
+        current_year=now.year,
     )
 
 
-@dashboard_bp.route('/api/dashboard-debug')
-@require_auth
-def dashboard_debug() -> Dict[str, Any]:
-    """
-    Debug API endpoint providing dashboard metrics and sample data.
-    
-    Returns:
-        JSON response with counts, samples, and debug information.
-    """
-    from ..extensions import db
-    from ..models import User
-    
-    supervisor_id = session['user_id']
-    
-    # Get counts using SQLAlchemy ORM for consistency
-    stores_count = db.session.query(Stores).filter(
-        Stores.supervisor_id == supervisor_id
-    ).count()
-    
-    pending_stores_count = db.session.query(PendingStores).filter(
-        PendingStores.supervisor_id == supervisor_id,
-        PendingStores.status == PENDING_STATUS
-    ).count()
-    
-    pending_clients_count = db.session.query(PendingClients).filter(
-        PendingClients.supervisor_id == supervisor_id,
-        PendingClients.status == PENDING_STATUS
-    ).count()
-    
-    # Get team members sample
-    team_members = db.session.query(User).options(
-        joinedload(User.user_type)
-    ).filter(
-        User.supervisor_id == supervisor_id
-    ).limit(50).all()
-    
-    team_members_list = [{
-        'honor_id': member.id,
-        'name': member.name,
-        'user_type_id': member.user_type_id,
-        'supervisor_id': member.supervisor_id,
-        'user_type_name': member.user_type.name if member.user_type else DEFAULT_NA_VALUE
-    } for member in team_members]
-    
-    # Get any users sample for debugging
-    any_users = db.session.query(User).limit(50).all()
-    any_users_list = [{
-        'id': user.id,
-        'name': user.name,
-        'user_type_id': user.user_type_id,
-        'supervisor_id': user.supervisor_id
-    } for user in any_users]
-    
-    promoters_count = sum(1 for m in team_members_list if AMBASSADOR_ROLE_KEYWORD in (m.get('user_type_name') or '').upper())
-
-    return jsonify({
-        'session_user_id': session.get('user_id'),
-        'stores_count': stores_count,
-        'team_members_count': len(team_members_list),
-        'promoters_count': promoters_count,
-        'pending_stores_count': pending_stores_count,
-        'pending_clients_count': pending_clients_count,
-        'team_members_sample': team_members_list[:3],
-        'users_any_sample': any_users_list,
-    })
 
 @dashboard_bp.route('/create-store')
 @require_auth
@@ -404,12 +360,102 @@ def assignments_page() -> str:
 @dashboard_bp.route('/admin/approvals')
 @require_admin
 def admin_approvals_page() -> str:
-    """
-    Admin interface for approving pending assignments.
-    
-    Returns:
-        Rendered admin approvals template for managing pending items.
-    """
     return render_template('admin_approvals.html')
+
+
+def _csv_safe(v):
+    """Prevent CSV formula injection when opened in Excel."""
+    s = '' if v is None else str(v)
+    return "'" + s if s[:1] in ('=', '+', '-', '@', '\t', '\r') else s
+
+
+@dashboard_bp.route('/erp/export')
+@require_auth
+def erp_export():
+    """Download approved assignments as CSV for ERP upload."""
+    supervisor_id = session['user_id']
+
+    assignments = db.session.query(StoreAssignment).filter(
+        StoreAssignment.supervisor_id == supervisor_id,
+        StoreAssignment.status == 'APPROVED',
+        StoreAssignment.synced_to_erp == False
+    ).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        'assignment_id', 'staff_type', 'staff_id', 'staff_name',
+        'store_type', 'store_id', 'store_name', 'role',
+        'assigned_date', 'approved_date'
+    ])
+
+    for a in assignments:
+        staff_name = ''
+        if a.staff_type == 'user':
+            staff = db.session.query(User).filter_by(id=a.staff_id).first()
+            staff_name = staff.name if staff else ''
+        else:
+            from ..models import PendingClients as PC
+            client = db.session.query(PC).filter_by(id=int(a.staff_id)).first()
+            staff_name = client.name if client else ''
+
+        store_name = ''
+        if a.store_type == 'store':
+            store = db.session.query(Stores).filter_by(id=a.store_id).first()
+            store_name = store.store_name if store else ''
+        else:
+            ps = db.session.query(PendingStores).filter_by(id=int(a.store_id)).first()
+            store_name = ps.store_name if ps else ''
+
+        writer.writerow([
+            a.id, a.staff_type, a.staff_id, _csv_safe(staff_name),
+            a.store_type, a.store_id, _csv_safe(store_name), a.role,
+            a.assigned_date.strftime('%Y-%m-%d') if a.assigned_date else '',
+            a.approved_date.strftime('%Y-%m-%d') if a.approved_date else '',
+        ])
+
+    resp = make_response(output.getvalue())
+    resp.headers['Content-Type'] = 'text/csv; charset=utf-8'
+    resp.headers['Content-Disposition'] = f'attachment; filename=erp_export_{datetime.utcnow().strftime("%Y%m%d")}.csv'
+    return resp
+
+
+@dashboard_bp.route('/erp/import', methods=['POST'])
+@require_auth
+def erp_import():
+    """Upload ERP response CSV to mark assignments as synced."""
+    if 'file' not in request.files:
+        flash('No se seleccionó ningún archivo', 'error')
+        return redirect(url_for('dashboard.dashboard'))
+
+    file = request.files['file']
+    if not file.filename or not file.filename.endswith('.csv'):
+        flash('El archivo debe ser CSV', 'error')
+        return redirect(url_for('dashboard.dashboard'))
+
+    try:
+        stream = io.StringIO(file.stream.read().decode('utf-8'))
+        reader = csv.DictReader(stream)
+
+        synced_ids = []
+        for row in reader:
+            aid = row.get('assignment_id', '').strip()
+            if aid and aid.isdigit():
+                synced_ids.append(int(aid))
+
+        if synced_ids:
+            db.session.query(StoreAssignment).filter(
+                StoreAssignment.id.in_(synced_ids),
+                StoreAssignment.status == 'APPROVED',
+                StoreAssignment.supervisor_id == session['user_id']
+            ).update({'synced_to_erp': True}, synchronize_session=False)
+            db.session.commit()
+
+        flash(f'{len(synced_ids)} asignaciones marcadas como sincronizadas con ERP', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error procesando archivo: {str(e)}', 'error')
+
+    return redirect(url_for('dashboard.dashboard'))
 
 

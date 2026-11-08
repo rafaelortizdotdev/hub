@@ -11,7 +11,7 @@ if sys.platform == 'win32':
     sys.stdout.reconfigure(encoding='utf-8')
 
 def apply_migration():
-    db_path = os.path.join('instance', 'honor_hub.db')
+    db_path = os.path.join('instance', 'supervisor_hub.db')
     
     if not os.path.exists(db_path):
         print(f"[ERROR] Database not found at {db_path}")
@@ -114,7 +114,7 @@ def apply_migration():
         conn.close()
 
 if __name__ == '__main__':
-    print("HONOR Hub Database Migration")
+    print("Supervisor Hub Database Migration")
     print("=" * 50)
     success = apply_migration()
     print("=" * 50)

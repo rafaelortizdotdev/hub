@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Store Assignments - HONOR Hub</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <title>Store Assignments - Supervisor Hub</title>
+    <script src="{{ url_for('static', filename='js/tailwind.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/sweetalert2.js') }}"></script>
     <style>
         .dual-list-container {
             display: grid;
@@ -87,7 +87,7 @@
     <nav class="bg-white shadow-sm border-b">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
-                <h1 class="text-xl font-semibold text-gray-900">HONOR Hub - Store Assignments</h1>
+                <h1 class="text-xl font-semibold text-gray-900">Supervisor Hub - Asignaciones</h1>
                 <a href="{{ url_for('dashboard.dashboard') }}" class="text-blue-600 hover:text-blue-800">← Back to Dashboard</a>
             </div>
         </div>
@@ -215,6 +215,8 @@
     </div>
 
     <script>
+        const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
         // Assignment Manager
         class AssignmentManager {
             constructor() {
@@ -409,11 +411,12 @@
                     return `
                     <div class="list-item ${pendingClass} ${this.selectedAvailable.has(staff.id) ? 'selected' : ''}" 
                          data-id="${staff.id}"
-                         onclick="assignmentManager.toggleSelection('available', '${staff.id}')">
+                         data-staff-id="${esc(staff.id)}"
+                         onclick="assignmentManager.toggleSelection('available', this.dataset.staffId)">
                         <div class="flex items-center justify-between">
                             <div class="flex-1">
-                                <div class="font-medium text-gray-900">${staff.name}</div>
-                                <div class="text-sm text-gray-500">${storeInfo}</div>
+                                <div class="font-medium text-gray-900">${esc(staff.name)}</div>
+                                <div class="text-sm text-gray-500">${esc(storeInfo)}</div>
                                 ${pendingText}
                             </div>
                             <span class="badge ${staff.type === 'user' ? 'badge-active' : 'badge-pending'}">
@@ -492,10 +495,11 @@
                     return `
                     <div class="list-item ${pendingClass} ${this.selectedAssigned.has(assignment.id) ? 'selected' : ''}" 
                          data-id="${assignment.id}"
-                         onclick="assignmentManager.toggleSelection('assigned', '${assignment.id}')">
+                         data-assign-id="${esc(String(assignment.id))}"
+                         onclick="assignmentManager.toggleSelection('assigned', this.dataset.assignId)">
                         <div class="flex items-center justify-between">
                             <div class="flex-1">
-                                <div class="font-medium text-gray-900">${assignment.staff_name || 'Unknown'}</div>
+                                <div class="font-medium text-gray-900">${esc(assignment.staff_name || 'Unknown')}</div>
                                 <div class="text-sm text-gray-500">
                                     ${dateText}
                                 </div>
