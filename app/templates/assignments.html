@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Store Assignments - Supervisor Hub</title>
+    <title>Asignaciones - Supervisor Hub</title>
     <script src="{{ url_for('static', filename='js/tailwind.js') }}"></script>
     <script src="{{ url_for('static', filename='js/sweetalert2.js') }}"></script>
     <style>
@@ -64,7 +64,6 @@
             background-color: #dbeafe;
             color: #1e40af;
         }
-        /* Visual feedback for pending changes */
         .pending-change {
             background: linear-gradient(to right, #f3f4f6 0%, #e5e7eb 100%);
             border-left: 4px solid #3b82f6;
@@ -88,7 +87,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
                 <h1 class="text-xl font-semibold text-gray-900">Supervisor Hub - Asignaciones</h1>
-                <a href="{{ url_for('dashboard.dashboard') }}" class="text-blue-600 hover:text-blue-800">← Back to Dashboard</a>
+                <a href="{{ url_for('dashboard.dashboard') }}" class="text-blue-600 hover:text-blue-800">← Volver al Panel</a>
             </div>
         </div>
     </nav>
@@ -96,24 +95,24 @@
     <!-- Main Content -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="bg-white rounded-lg shadow p-6">
-            <h2 class="text-2xl font-bold text-gray-900 mb-6">Manage Store Assignments</h2>
-            
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Gestionar Asignaciones de Tiendas</h2>
+
             <!-- Store Selector -->
             <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Select Store</label>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Seleccionar Tienda</label>
                 <select id="storeSelect" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
-                    <option value="">Choose a store...</option>
-                    <optgroup label="Active Stores">
+                    <option value="">Elegir tienda...</option>
+                    <optgroup label="Tiendas Activas">
                         {% for store in active_stores %}
                         <option value="store:{{ store.id }}" data-store-type="store" data-store-id="{{ store.id }}">
                             {{ store.store_name }} - {{ store.city.name if store.city else 'N/A' }}
                         </option>
                         {% endfor %}
                     </optgroup>
-                    <optgroup label="Pending Stores">
+                    <optgroup label="Tiendas Pendientes">
                         {% for store in pending_stores %}
                         <option value="pending_store:{{ store.id }}" data-store-type="pending_store" data-store-id="{{ store.id }}">
-                            {{ store.store_name }} - {{ store.city.name if store.city else 'N/A' }} (Pending)
+                            {{ store.store_name }} - {{ store.city.name if store.city else 'N/A' }} (Pendiente)
                         </option>
                         {% endfor %}
                     </optgroup>
@@ -124,10 +123,10 @@
             <div class="mb-6 border-b border-gray-200">
                 <div class="flex space-x-4">
                     <button id="tabSalesmen" class="role-tab px-4 py-2 font-medium border-b-2 border-blue-500 text-blue-600" data-role="SALESMAN">
-                        Salesmen
+                        Vendedores
                     </button>
                     <button id="tabPromoters" class="role-tab px-4 py-2 font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700" data-role="PROMOTER">
-                        Promoters
+                        Promotores
                     </button>
                 </div>
             </div>
@@ -137,18 +136,17 @@
                 <div class="dual-list-container">
                     <!-- Available Staff -->
                     <div class="flex flex-col">
-                        <h3 class="text-lg font-semibold mb-2 text-gray-700">Available Staff</h3>
+                        <h3 class="text-lg font-semibold mb-2 text-gray-700">Personal Disponible</h3>
                         <div class="list-box bg-white">
                             <div class="search-box">
-                                <input type="text" id="searchAvailable" placeholder="Search..." 
+                                <input type="text" id="searchAvailable" placeholder="Buscar..."
                                        class="w-full px-3 py-2 border border-gray-300 rounded text-sm">
                             </div>
                             <div id="availableList" class="p-2">
-                                <!-- Populated by JavaScript -->
                             </div>
                         </div>
                         <p class="text-xs text-gray-500 mt-2">
-                            Click to select, use arrows to move
+                            Clic para seleccionar, use flechas para mover
                         </p>
                     </div>
 
@@ -164,18 +162,17 @@
 
                     <!-- Assigned Staff -->
                     <div class="flex flex-col">
-                        <h3 class="text-lg font-semibold mb-2 text-gray-700">Assigned to Store</h3>
+                        <h3 class="text-lg font-semibold mb-2 text-gray-700">Asignados a la Tienda</h3>
                         <div class="list-box bg-white">
                             <div class="search-box">
-                                <input type="text" id="searchAssigned" placeholder="Search..." 
+                                <input type="text" id="searchAssigned" placeholder="Buscar..."
                                        class="w-full px-3 py-2 border border-gray-300 rounded text-sm">
                             </div>
                             <div id="assignedList" class="p-2">
-                                <!-- Populated by JavaScript -->
                             </div>
                         </div>
                         <p class="text-xs text-gray-500 mt-2">
-                            Only showing APPROVED assignments
+                            Solo mostrando asignaciones APROBADAS
                         </p>
                     </div>
                 </div>
@@ -183,14 +180,14 @@
                 <!-- Action Buttons -->
                 <div class="mt-6 flex items-center justify-between">
                     <div class="text-sm text-gray-600">
-                        <span id="changesSummary">No changes</span>
+                        <span id="changesSummary">Sin cambios</span>
                     </div>
                     <div class="space-x-3">
                         <button id="btnCancel" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50">
-                            Cancel
+                            Cancelar
                         </button>
                         <button id="btnSubmit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed" disabled>
-                            Submit for Approval
+                            Enviar para Aprobación
                         </button>
                     </div>
                 </div>
@@ -198,7 +195,7 @@
                 <!-- Info Banner -->
                 <div class="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
                     <p class="text-sm text-yellow-800">
-                        <strong>⚠️ Note:</strong> All assignment changes require administrator approval before becoming active.
+                        <strong>Nota:</strong> Todos los cambios de asignación requieren aprobación del administrador antes de activarse.
                     </p>
                 </div>
             </div>
@@ -208,8 +205,8 @@
                 <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                 </svg>
-                <h3 class="mt-2 text-sm font-medium text-gray-900">Select a store to manage assignments</h3>
-                <p class="mt-1 text-sm text-gray-500">Choose a store from the dropdown above</p>
+                <h3 class="mt-2 text-sm font-medium text-gray-900">Seleccione una tienda para gestionar asignaciones</h3>
+                <p class="mt-1 text-sm text-gray-500">Elija una tienda del menú desplegable</p>
             </div>
         </div>
     </div>
@@ -217,7 +214,6 @@
     <script>
         const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-        // Assignment Manager
         class AssignmentManager {
             constructor() {
                 this.storeType = null;
@@ -231,12 +227,11 @@
                     toAssign: [],
                     toUnassign: []
                 };
-                this.staffCache = {}; // Cache staff data for rendering pending assignments
+                this.staffCache = {};
                 this.initializeEventListeners();
             }
 
             initializeEventListeners() {
-                // Store selection
                 document.getElementById('storeSelect').addEventListener('change', (e) => {
                     if (e.target.value) {
                         const option = e.target.options[e.target.selectedIndex];
@@ -245,23 +240,20 @@
                         this.showInterface();
                         this.loadData();
                     } else {
-                        // Store deselected - reset everything
                         this.storeType = null;
                         this.storeId = null;
                         this.hideInterface();
                     }
                 });
 
-                // Role tabs
                 document.querySelectorAll('.role-tab').forEach(tab => {
                     tab.addEventListener('click', (e) => {
                         const newRole = e.target.dataset.role;
-                        // Only switch if store is selected
                         if (!this.storeId) {
                             Swal.fire({
                                 icon: 'warning',
-                                title: 'No Store Selected',
-                                text: 'Please select a store first'
+                                title: 'Sin Tienda Seleccionada',
+                                text: 'Por favor seleccione una tienda primero'
                             });
                             return;
                         }
@@ -271,21 +263,17 @@
                     });
                 });
 
-                // Arrow buttons
                 document.getElementById('btnMoveRight').addEventListener('click', () => this.moveToAssigned());
                 document.getElementById('btnMoveLeft').addEventListener('click', () => this.moveToAvailable());
 
-                // Action buttons
                 document.getElementById('btnCancel').addEventListener('click', () => window.location.href = '/dashboard');
                 document.getElementById('btnSubmit').addEventListener('click', () => this.submitChanges());
 
-                // Search
                 document.getElementById('searchAvailable').addEventListener('input', (e) => this.filterList('available', e.target.value));
                 document.getElementById('searchAssigned').addEventListener('input', (e) => this.filterList('assigned', e.target.value));
             }
 
             switchRole(newRole) {
-                // Update active tab
                 document.querySelectorAll('.role-tab').forEach(tab => {
                     if (tab.dataset.role === newRole) {
                         tab.classList.add('border-blue-500', 'text-blue-600');
@@ -295,51 +283,44 @@
                         tab.classList.add('border-transparent', 'text-gray-500');
                     }
                 });
-                
+
                 this.role = newRole;
                 this.loadData();
             }
 
             async loadData() {
                 try {
-                    // Show loading
                     this.showInterface();
-                    document.getElementById('availableList').innerHTML = '<div class="text-center py-4 text-gray-500">Loading...</div>';
-                    document.getElementById('assignedList').innerHTML = '<div class="text-center py-4 text-gray-500">Loading...</div>';
+                    document.getElementById('availableList').innerHTML = '<div class="text-center py-4 text-gray-500">Cargando...</div>';
+                    document.getElementById('assignedList').innerHTML = '<div class="text-center py-4 text-gray-500">Cargando...</div>';
 
-                    // Load assigned staff
                     const assignedRes = await fetch(`/api/assignments/store/${this.storeType}/${this.storeId}?role=${this.role}`);
                     const assignedData = await assignedRes.json();
                     this.assignedStaff = assignedData.assignments || [];
 
-                    // Load available staff
                     const availableRes = await fetch(`/api/assignments/available-staff?store_type=${this.storeType}&store_id=${this.storeId}&role=${this.role}`);
                     const availableData = await availableRes.json();
                     this.availableStaff = availableData.available || [];
 
-                    // Cache staff data for later reference (from available staff)
                     this.staffCache = {};
                     this.availableStaff.forEach(staff => {
                         const key = `${staff.type}-${staff.original_id}`;
                         this.staffCache[key] = staff;
                     });
-                    
-                    // Also cache staff from assigned list (they might not be in available)
+
                     this.assignedStaff.forEach(assignment => {
                         const key = `${assignment.staff_type}-${assignment.staff_id}`;
                         if (!this.staffCache[key] && assignment.staff_name) {
-                            // Create a minimal staff object for caching
                             this.staffCache[key] = {
                                 id: `${assignment.staff_type}-${assignment.staff_id}`,
                                 type: assignment.staff_type,
                                 original_id: assignment.staff_id,
                                 name: assignment.staff_name,
-                                stores_count: 0  // We don't know this for assigned staff
+                                stores_count: 0
                             };
                         }
                     });
 
-                    // Reset selections and changes
                     this.selectedAvailable.clear();
                     this.selectedAssigned.clear();
                     this.pendingChanges = { toAssign: [], toUnassign: [] };
@@ -350,7 +331,7 @@
                     Swal.fire({
                         icon: 'error',
                         title: 'Error',
-                        text: 'Failed to load assignments'
+                        text: 'Error al cargar asignaciones'
                     });
                 }
             }
@@ -364,52 +345,45 @@
 
             renderAvailableList() {
                 const container = document.getElementById('availableList');
-                
+
                 if (this.availableStaff.length === 0) {
-                    container.innerHTML = '<div class="text-center py-4 text-gray-500">No available staff</div>';
+                    container.innerHTML = '<div class="text-center py-4 text-gray-500">Sin personal disponible</div>';
                     return;
                 }
 
                 container.innerHTML = this.availableStaff.map(staff => {
-                    // Show store assignments count
-                    const storeInfo = staff.stores_count > 0 
-                        ? `${staff.stores_count} store${staff.stores_count > 1 ? 's' : ''}`
-                        : 'No stores';
-                    
-                    // Check if this staff is marked for removal (will show in Available with visual feedback)
+                    const storeInfo = staff.stores_count > 0
+                        ? `${staff.stores_count} tienda${staff.stores_count > 1 ? 's' : ''}`
+                        : 'Sin tiendas';
+
                     const isMarkedForRemoval = this.pendingChanges.toUnassign.some(assignmentId => {
-                        // Find the assignment being removed
                         const assignment = this.assignedStaff.find(a => a.id == assignmentId);
                         if (!assignment) return false;
-                        
-                        // Check if it matches this staff member using original_id
                         const assignmentStaffKey = `${assignment.staff_type}-${assignment.staff_id}`;
                         const staffKey = `${staff.type}-${staff.original_id}`;
                         return assignmentStaffKey === staffKey;
                     });
-                    
-                    // Determine the visual feedback class
+
                     let pendingClass = '';
                     let pendingText = '';
                     if (isMarkedForRemoval) {
-                        // Find the assignment to check its status
                         const assignment = this.assignedStaff.find(a => {
                             const assignmentStaffKey = `${a.staff_type}-${a.staff_id}`;
                             const staffKey = `${staff.type}-${staff.original_id}`;
                             return assignmentStaffKey === staffKey && this.pendingChanges.toUnassign.includes(a.id);
                         });
-                        
+
                         if (assignment && assignment.status === 'PENDING') {
                             pendingClass = 'pending-cancellation';
-                            pendingText = '<span class="text-xs text-orange-600 font-medium">Cancelling assignment</span>';
+                            pendingText = '<span class="text-xs text-orange-600 font-medium">Cancelando asignación</span>';
                         } else if (assignment) {
                             pendingClass = 'pending-removal';
-                            pendingText = '<span class="text-xs text-red-600 font-medium">Removing assignment</span>';
+                            pendingText = '<span class="text-xs text-red-600 font-medium">Removiendo asignación</span>';
                         }
                     }
-                    
+
                     return `
-                    <div class="list-item ${pendingClass} ${this.selectedAvailable.has(staff.id) ? 'selected' : ''}" 
+                    <div class="list-item ${pendingClass} ${this.selectedAvailable.has(staff.id) ? 'selected' : ''}"
                          data-id="${staff.id}"
                          data-staff-id="${esc(staff.id)}"
                          onclick="assignmentManager.toggleSelection('available', this.dataset.staffId)">
@@ -420,7 +394,7 @@
                                 ${pendingText}
                             </div>
                             <span class="badge ${staff.type === 'user' ? 'badge-active' : 'badge-pending'}">
-                                ${staff.type === 'user' ? 'Active' : 'Pending'}
+                                ${staff.type === 'user' ? 'Activo' : 'Pendiente'}
                             </span>
                         </div>
                     </div>
@@ -429,77 +403,68 @@
 
             renderAssignedList() {
                 const container = document.getElementById('assignedList');
-                
-                // Combine existing assignments (from DB) and unsaved pending changes (local only)
+
                 const allAssignments = [
-                    // Filter out assignments marked for removal - they'll show in available list instead
                     ...this.assignedStaff
                         .filter(a => {
-                            // Use loose equality to handle string/number mismatch
                             return !this.pendingChanges.toUnassign.some(id => id == a.id);
                         })
                         .map(a => ({
-                            ...a, 
+                            ...a,
                             isPendingChange: false,
-                            isFromDB: true  // This came from the database
+                            isFromDB: true
                         })),
-                    // Only include local pending changes that haven't been submitted yet
                     ...this.pendingChanges.toAssign.map(pending => {
-                        // Look up staff from cache
                         const cacheKey = `${pending.staff_type}-${pending.staff_id}`;
                         const staff = this.staffCache[cacheKey];
-                        
+
                         return staff ? {
                             id: `pending-${pending.staff_type}-${pending.staff_id}`,
                             staff_name: staff.name,
                             assigned_date: new Date().toISOString(),
                             status: 'PENDING',
                             isPendingChange: true,
-                            isFromDB: false,  // This is only local, not yet submitted
+                            isFromDB: false,
                             pendingStaffId: pending.staff_id,
                             pendingStaffType: pending.staff_type
                         } : null;
                     }).filter(Boolean)
                 ];
-                
+
                 if (allAssignments.length === 0) {
-                    container.innerHTML = '<div class="text-center py-4 text-gray-500">No assigned staff</div>';
+                    container.innerHTML = '<div class="text-center py-4 text-gray-500">Sin personal asignado</div>';
                     return;
                 }
 
                 container.innerHTML = allAssignments.map(assignment => {
                     const badgeClass = assignment.status === 'PENDING' ? 'badge-pending' : 'badge-approved';
-                    
-                    // Determine visual feedback class
+
                     let pendingClass = '';
                     if (assignment.isPendingChange) {
-                        // New assignment not yet submitted
                         pendingClass = 'pending-change';
                     }
-                    
-                    // Determine the status text and description
+
                     let statusText = assignment.status;
                     let dateText = '';
-                    
+
                     if (assignment.isFromDB && assignment.status === 'PENDING') {
                         statusText = 'PENDING';
-                        dateText = 'Awaiting admin approval';
+                        dateText = 'Esperando aprobación del administrador';
                     } else if (assignment.isPendingChange) {
-                        dateText = 'To be submitted';
+                        dateText = 'Por enviar';
                     } else {
-                        // Format date in user's local timezone
                         const date = new Date(assignment.assigned_date);
-                        dateText = `Assigned: ${date.toLocaleDateString()} ${date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}`;
+                        dateText = `Asignado: ${date.toLocaleDateString()} ${date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}`;
                     }
-                    
+
                     return `
-                    <div class="list-item ${pendingClass} ${this.selectedAssigned.has(assignment.id) ? 'selected' : ''}" 
+                    <div class="list-item ${pendingClass} ${this.selectedAssigned.has(assignment.id) ? 'selected' : ''}"
                          data-id="${assignment.id}"
                          data-assign-id="${esc(String(assignment.id))}"
                          onclick="assignmentManager.toggleSelection('assigned', this.dataset.assignId)">
                         <div class="flex items-center justify-between">
                             <div class="flex-1">
-                                <div class="font-medium text-gray-900">${esc(assignment.staff_name || 'Unknown')}</div>
+                                <div class="font-medium text-gray-900">${esc(assignment.staff_name || 'Desconocido')}</div>
                                 <div class="text-sm text-gray-500">
                                     ${dateText}
                                 </div>
@@ -514,13 +479,13 @@
 
             toggleSelection(list, id) {
                 const selectedSet = list === 'available' ? this.selectedAvailable : this.selectedAssigned;
-                
+
                 if (selectedSet.has(id)) {
                     selectedSet.delete(id);
                 } else {
                     selectedSet.add(id);
                 }
-                
+
                 this.render();
             }
 
@@ -528,39 +493,32 @@
                 this.selectedAvailable.forEach(staffId => {
                     const staff = this.availableStaff.find(s => s.id === staffId);
                     if (staff) {
-                        // Add to pending assignments
                         this.pendingChanges.toAssign.push({
                             staff_type: staff.type,
                             staff_id: staff.original_id
                         });
-                        // Remove from available (will move to assigned list)
                         this.availableStaff = this.availableStaff.filter(s => s.id !== staffId);
                     }
                 });
-                
+
                 this.selectedAvailable.clear();
                 this.render();
             }
 
             moveToAvailable() {
                 this.selectedAssigned.forEach(assignmentId => {
-                    // Find the assignment to determine if it's from DB or local
                     const assignment = this.assignedStaff.find(a => a.id == assignmentId);
-                    
-                    // Check if it's a local pending assignment (starts with 'pending-')
+
                     if (String(assignmentId).startsWith('pending-')) {
-                        // Extract staff_type and staff_id from the ID format: "pending-{type}-{id}"
                         const parts = String(assignmentId).split('-');
                         if (parts.length >= 3) {
                             const staffType = parts[1];
-                            const staffId = parts.slice(2).join('-'); // Handle IDs that might contain dashes
-                            
-                            // Remove from local pending assignments
+                            const staffId = parts.slice(2).join('-');
+
                             this.pendingChanges.toAssign = this.pendingChanges.toAssign.filter(
                                 p => !(p.staff_type === staffType && String(p.staff_id) === staffId)
                             );
-                            
-                            // Add staff back to available list from cache
+
                             const cacheKey = `${staffType}-${staffId}`;
                             const staff = this.staffCache[cacheKey];
                             if (staff && !this.availableStaff.find(s => s.id === staff.id)) {
@@ -568,25 +526,20 @@
                             }
                         }
                     } else if (assignment && assignment.status === 'PENDING') {
-                        // It's a PENDING assignment from the database
-                        // Mark it for removal (will cancel the pending request)
                         if (!this.pendingChanges.toUnassign.includes(assignmentId)) {
                             this.pendingChanges.toUnassign.push(assignmentId);
                         }
-                        
-                        // Add back to available list so user can see it
+
                         const staffKey = `${assignment.staff_type}-${assignment.staff_id}`;
                         const staff = this.staffCache[staffKey];
                         if (staff && !this.availableStaff.find(s => s.id === staff.id)) {
                             this.availableStaff.push(staff);
                         }
                     } else if (assignment && assignment.status === 'APPROVED') {
-                        // It's an APPROVED assignment - mark for removal
                         if (!this.pendingChanges.toUnassign.includes(assignmentId)) {
                             this.pendingChanges.toUnassign.push(assignmentId);
                         }
-                        
-                        // Add back to available list so user can see it
+
                         const staffKey = `${assignment.staff_type}-${assignment.staff_id}`;
                         const staff = this.staffCache[staffKey];
                         if (staff && !this.availableStaff.find(s => s.id === staff.id)) {
@@ -594,7 +547,7 @@
                         }
                     }
                 });
-                
+
                 this.selectedAssigned.clear();
                 this.render();
             }
@@ -602,7 +555,7 @@
             updateButtons() {
                 document.getElementById('btnMoveRight').disabled = this.selectedAvailable.size === 0;
                 document.getElementById('btnMoveLeft').disabled = this.selectedAssigned.size === 0;
-                
+
                 const hasChanges = this.pendingChanges.toAssign.length > 0 || this.pendingChanges.toUnassign.length > 0;
                 document.getElementById('btnSubmit').disabled = !hasChanges;
             }
@@ -610,11 +563,10 @@
             updateChangesSummary() {
                 const toAssign = this.pendingChanges.toAssign.length;
                 const toUnassign = this.pendingChanges.toUnassign.length;
-                
-                // Count how many of the unassignments are PENDING (will be cancelled vs removed)
+
                 let pendingToCancel = 0;
                 let approvedToRemove = 0;
-                
+
                 this.pendingChanges.toUnassign.forEach(id => {
                     const assignment = this.assignedStaff.find(a => a.id === id);
                     if (assignment && assignment.status === 'PENDING') {
@@ -623,28 +575,28 @@
                         approvedToRemove++;
                     }
                 });
-                
-                let summary = 'No changes';
+
+                let summary = 'Sin cambios';
                 if (toAssign > 0 || toUnassign > 0) {
                     const parts = [];
-                    if (toAssign > 0) parts.push(`${toAssign} to assign`);
-                    if (pendingToCancel > 0) parts.push(`${pendingToCancel} to cancel`);
-                    if (approvedToRemove > 0) parts.push(`${approvedToRemove} to remove`);
+                    if (toAssign > 0) parts.push(`${toAssign} por asignar`);
+                    if (pendingToCancel > 0) parts.push(`${pendingToCancel} por cancelar`);
+                    if (approvedToRemove > 0) parts.push(`${approvedToRemove} por remover`);
                     summary = parts.join(', ');
                 }
-                
+
                 document.getElementById('changesSummary').textContent = summary;
             }
 
             cancelChanges() {
                 if (this.pendingChanges.toAssign.length > 0 || this.pendingChanges.toUnassign.length > 0) {
                     Swal.fire({
-                        title: 'Discard changes?',
-                        text: 'All pending changes will be lost.',
+                        title: '¿Descartar cambios?',
+                        text: 'Todos los cambios pendientes se perderán.',
                         icon: 'warning',
                         showCancelButton: true,
-                        confirmButtonText: 'Discard',
-                        cancelButtonText: 'Keep editing'
+                        confirmButtonText: 'Descartar',
+                        cancelButtonText: 'Seguir editando'
                     }).then((result) => {
                         if (result.isConfirmed) {
                             this.loadData();
@@ -657,7 +609,6 @@
 
             async submitChanges() {
                 try {
-                    // Log what we're sending for debugging
                     const payload = {
                         store_type: this.storeType,
                         store_id: this.storeId,
@@ -665,9 +616,9 @@
                         assign: this.pendingChanges.toAssign,
                         unassign: this.pendingChanges.toUnassign
                     };
-                    
+
                     console.log('Submitting assignment changes:', payload);
-                    
+
                     const response = await fetch('/api/assignments/bulk', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
@@ -675,67 +626,64 @@
                     });
 
                     const result = await response.json();
-                    
+
                     console.log('Server response:', result);
 
                     if (response.ok) {
-                        // Build contextual message
                         let message = '';
                         const parts = [];
-                        
+
                         if (result.created > 0) {
-                            parts.push(`${result.created} assignment(s) created`);
+                            parts.push(`${result.created} asignación(es) creada(s)`);
                         }
                         if (result.removed > 0) {
-                            parts.push(`${result.removed} assignment(s) cancelled/removed`);
+                            parts.push(`${result.removed} asignación(es) cancelada(s)/removida(s)`);
                         }
-                        
+
                         if (parts.length > 0) {
-                            message = parts.join(' and ') + '.';
+                            message = parts.join(' y ') + '.';
                         } else {
-                            message = 'Changes processed successfully.';
+                            message = 'Cambios procesados exitosamente.';
                         }
-                        
-                        // Check if any changes need approval
-                        const needsApproval = result.created > 0 || 
+
+                        const needsApproval = result.created > 0 ||
                             (this.pendingChanges.toUnassign.some(id => {
                                 const assignment = this.assignedStaff.find(a => a.id === id);
                                 return assignment && assignment.status === 'APPROVED';
                             }));
-                        
+
                         if (needsApproval) {
-                            message += '\n\nNew assignments and removals require admin approval.';
+                            message += '\n\nLas nuevas asignaciones y remociones requieren aprobación del administrador.';
                         }
-                        
+
                         Swal.fire({
                             icon: 'success',
-                            title: 'Changes Submitted!',
+                            title: '¡Cambios Enviados!',
                             text: message,
                             confirmButtonColor: '#2563eb'
                         }).then(() => {
                             this.loadData();
                         });
                     } else {
-                        // Build detailed error message
-                        let errorMessage = result.error || 'Failed to submit changes';
-                        
+                        let errorMessage = result.error || 'Error al enviar cambios';
+
                         if (result.field) {
-                            errorMessage += `\n\nField: ${result.field}`;
+                            errorMessage += `\n\nCampo: ${result.field}`;
                         }
-                        
+
                         if (result.data) {
-                            errorMessage += `\n\nData: ${JSON.stringify(result.data, null, 2)}`;
+                            errorMessage += `\n\nDatos: ${JSON.stringify(result.data, null, 2)}`;
                         }
-                        
+
                         if (result.type) {
-                            errorMessage += `\n\nError Type: ${result.type}`;
+                            errorMessage += `\n\nTipo de Error: ${result.type}`;
                         }
-                        
+
                         console.error('Assignment submission error:', result);
-                        
+
                         Swal.fire({
                             icon: 'error',
-                            title: 'Submission Failed',
+                            title: 'Error al Enviar',
                             html: `<pre style="text-align: left; font-size: 12px; max-height: 300px; overflow: auto;">${errorMessage}</pre>`,
                             confirmButtonColor: '#ef4444',
                             width: '600px'
@@ -745,8 +693,8 @@
                     console.error('Error submitting changes:', error);
                     Swal.fire({
                         icon: 'error',
-                        title: 'Network Error',
-                        text: `Failed to submit changes: ${error.message}`,
+                        title: 'Error de Red',
+                        text: `Error al enviar cambios: ${error.message}`,
                         confirmButtonColor: '#ef4444'
                     });
                 }
@@ -771,8 +719,7 @@
             hideInterface() {
                 document.getElementById('assignmentInterface').classList.add('hidden');
                 document.getElementById('emptyState').classList.remove('hidden');
-                
-                // Clear data
+
                 this.availableStaff = [];
                 this.assignedStaff = [];
                 this.selectedAvailable.clear();
@@ -782,9 +729,7 @@
             }
         }
 
-        // Initialize
         const assignmentManager = new AssignmentManager();
     </script>
 </body>
 </html>
-

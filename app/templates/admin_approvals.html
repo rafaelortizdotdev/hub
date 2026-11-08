@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Approvals - Supervisor Hub</title>
+    <title>Aprobaciones - Supervisor Hub</title>
     <script src="{{ url_for('static', filename='js/tailwind.js') }}"></script>
     <script src="{{ url_for('static', filename='js/sweetalert2.js') }}"></script>
     <style>
@@ -48,7 +48,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
                 <h1 class="text-xl font-semibold text-gray-900">Supervisor Hub - Aprobaciones</h1>
-                <a href="{{ url_for('dashboard.dashboard') }}" class="text-blue-600 hover:text-blue-800">← Back to Dashboard</a>
+                <a href="{{ url_for('dashboard.dashboard') }}" class="text-blue-600 hover:text-blue-800">← Volver al Panel</a>
             </div>
         </div>
     </nav>
@@ -57,8 +57,8 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <!-- Header -->
         <div class="mb-8">
-            <h2 class="text-2xl font-bold text-gray-900 mb-2">Pending Assignment Approvals</h2>
-            <p class="text-gray-600">Review and approve or reject assignment changes submitted by supervisors</p>
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">Aprobaciones de Asignaciones Pendientes</h2>
+            <p class="text-gray-600">Revise y apruebe o rechace los cambios de asignación enviados por supervisores</p>
         </div>
 
         <!-- Stats -->
@@ -71,7 +71,7 @@
                         </svg>
                     </div>
                     <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-500">Pending Assignments</p>
+                        <p class="text-sm font-medium text-gray-500">Asignaciones Pendientes</p>
                         <p class="text-2xl font-semibold text-gray-900" id="statPending">0</p>
                     </div>
                 </div>
@@ -85,7 +85,7 @@
                         </svg>
                     </div>
                     <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-500">Approved Today</p>
+                        <p class="text-sm font-medium text-gray-500">Aprobadas Hoy</p>
                         <p class="text-2xl font-semibold text-gray-900" id="statApproved">0</p>
                     </div>
                 </div>
@@ -99,7 +99,7 @@
                         </svg>
                     </div>
                     <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-500">Rejected Today</p>
+                        <p class="text-sm font-medium text-gray-500">Rechazadas Hoy</p>
                         <p class="text-2xl font-semibold text-gray-900" id="statRejected">0</p>
                     </div>
                 </div>
@@ -111,13 +111,13 @@
             <div class="border-b border-gray-200">
                 <nav class="flex space-x-8 px-6" aria-label="Tabs">
                     <button class="filter-tab border-b-2 border-blue-500 text-blue-600 py-4 px-1 font-medium text-sm" data-status="PENDING">
-                        Pending
+                        Pendientes
                     </button>
                     <button class="filter-tab border-b-2 border-transparent text-gray-500 hover:text-gray-700 py-4 px-1 font-medium text-sm" data-status="APPROVED">
-                        Approved
+                        Aprobadas
                     </button>
                     <button class="filter-tab border-b-2 border-transparent text-gray-500 hover:text-gray-700 py-4 px-1 font-medium text-sm" data-status="REJECTED">
-                        Rejected
+                        Rechazadas
                     </button>
                 </nav>
             </div>
@@ -126,13 +126,13 @@
         <!-- Pending Assignments List -->
         <div class="bg-white rounded-lg shadow p-6">
             <div class="mb-4 flex justify-between items-center">
-                <h3 class="text-lg font-semibold text-gray-900">Assignment Requests</h3>
+                <h3 class="text-lg font-semibold text-gray-900">Solicitudes de Asignación</h3>
                 <div class="flex space-x-3">
                     <button id="btnBulkApprove" class="px-4 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed" disabled>
-                        ✓ Approve Selected
+                        ✓ Aprobar Seleccionadas
                     </button>
                     <button id="btnBulkReject" class="px-4 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed" disabled>
-                        ✗ Reject Selected
+                        ✗ Rechazar Seleccionadas
                     </button>
                 </div>
             </div>
@@ -140,7 +140,7 @@
             <!-- Loading State -->
             <div id="loadingState" class="text-center py-12">
                 <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <p class="mt-2 text-gray-600">Loading assignments...</p>
+                <p class="mt-2 text-gray-600">Cargando asignaciones...</p>
             </div>
 
             <!-- Empty State -->
@@ -148,13 +148,12 @@
                 <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
-                <h3 class="mt-2 text-sm font-medium text-gray-900">No pending assignments</h3>
-                <p class="mt-1 text-sm text-gray-500">All assignment requests have been reviewed</p>
+                <h3 class="mt-2 text-sm font-medium text-gray-900">Sin asignaciones pendientes</h3>
+                <p class="mt-1 text-sm text-gray-500">Todas las solicitudes de asignación han sido revisadas</p>
             </div>
 
             <!-- Assignments List -->
             <div id="assignmentsList">
-                <!-- Populated by JavaScript -->
             </div>
         </div>
     </div>
@@ -172,7 +171,6 @@
             }
 
             initializeEventListeners() {
-                // Filter tabs
                 document.querySelectorAll('.filter-tab').forEach(tab => {
                     tab.addEventListener('click', (e) => {
                         const newStatus = e.target.dataset.status;
@@ -180,13 +178,11 @@
                     });
                 });
 
-                // Bulk action buttons
                 document.getElementById('btnBulkApprove').addEventListener('click', () => this.bulkApprove());
                 document.getElementById('btnBulkReject').addEventListener('click', () => this.bulkReject());
             }
 
             switchStatus(newStatus) {
-                // Update active tab
                 document.querySelectorAll('.filter-tab').forEach(tab => {
                     if (tab.dataset.status === newStatus) {
                         tab.classList.add('border-blue-500', 'text-blue-600');
@@ -214,7 +210,7 @@
                         this.updateStats(data.stats || {});
                         this.render();
                     } else {
-                        throw new Error(data.error || 'Failed to load assignments');
+                        throw new Error(data.error || 'Error al cargar asignaciones');
                     }
                 } catch (error) {
                     console.error('Error loading assignments:', error);
@@ -222,7 +218,7 @@
                     Swal.fire({
                         icon: 'error',
                         title: 'Error',
-                        text: 'Failed to load assignment requests'
+                        text: 'Error al cargar solicitudes de asignación'
                     });
                 }
             }
@@ -235,7 +231,7 @@
 
             render() {
                 const container = document.getElementById('assignmentsList');
-                
+
                 if (this.assignments.length === 0) {
                     this.showEmpty();
                     return;
@@ -245,16 +241,16 @@
                 this.hideEmpty();
 
                 container.innerHTML = this.assignments.map(assignment => `
-                    <div class="approval-card ${this.selectedIds.has(assignment.id) ? 'selected' : ''}" 
+                    <div class="approval-card ${this.selectedIds.has(assignment.id) ? 'selected' : ''}"
                          data-id="${assignment.id}">
                         <div class="flex items-start justify-between">
                             <div class="flex items-start space-x-4 flex-1">
                                 ${this.currentStatus === 'PENDING' ? `
-                                <input type="checkbox" 
+                                <input type="checkbox"
                                        class="mt-1 h-5 w-5 text-blue-600 rounded border-gray-300"
                                        onchange="approvalManager.toggleSelection(${assignment.id})">
                                 ` : ''}
-                                
+
                                 <div class="flex-1">
                                     <div class="flex items-center space-x-3 mb-2">
                                         <h4 class="text-lg font-semibold text-gray-900">${esc(assignment.staff_name)}</h4>
@@ -263,10 +259,10 @@
                                         <span class="badge ${assignment.status === 'APPROVED' ? 'badge-pending' : 'bg-red-100 text-red-800'}">${assignment.status}</span>
                                         ` : ''}
                                     </div>
-                                    
+
                                     <div class="grid grid-cols-2 gap-4 text-sm">
                                         <div>
-                                            <span class="text-gray-500">Store:</span>
+                                            <span class="text-gray-500">Tienda:</span>
                                             <span class="font-medium text-gray-900">${esc(assignment.store_name)}</span>
                                         </div>
                                         <div>
@@ -274,26 +270,26 @@
                                             <span class="font-medium text-gray-900">${esc(assignment.supervisor_name)}</span>
                                         </div>
                                         <div>
-                                            <span class="text-gray-500">Requested:</span>
+                                            <span class="text-gray-500">Solicitado:</span>
                                             <span class="text-gray-700">${new Date(assignment.assigned_date).toLocaleString()}</span>
                                         </div>
                                         <div>
-                                            <span class="text-gray-500">Staff Type:</span>
-                                            <span class="text-gray-700">${assignment.staff_type === 'user' ? 'Active User' : 'Pending Client'}</span>
+                                            <span class="text-gray-500">Tipo de Personal:</span>
+                                            <span class="text-gray-700">${assignment.staff_type === 'user' ? 'Usuario Activo' : 'Cliente Pendiente'}</span>
                                         </div>
                                     </div>
 
                                     ${assignment.rejection_reason ? `
                                     <div class="mt-3 p-3 bg-red-50 border border-red-200 rounded">
                                         <p class="text-sm text-red-800">
-                                            <strong>Rejection Reason:</strong> ${esc(assignment.rejection_reason)}
+                                            <strong>Motivo de Rechazo:</strong> ${esc(assignment.rejection_reason)}
                                         </p>
                                     </div>
                                     ` : ''}
 
                                     ${assignment.approved_date ? `
                                     <div class="mt-2 text-sm text-gray-500">
-                                        ${esc(assignment.status)} by ${esc(assignment.approver_name || 'Admin')} on ${new Date(assignment.approved_date).toLocaleString()}
+                                        ${esc(assignment.status)} por ${esc(assignment.approver_name || 'Admin')} el ${new Date(assignment.approved_date).toLocaleString()}
                                     </div>
                                     ` : ''}
                                 </div>
@@ -303,11 +299,11 @@
                             <div class="flex space-x-2 ml-4">
                                 <button onclick="approvalManager.approveOne(${assignment.id})"
                                         class="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700">
-                                    Approve
+                                    Aprobar
                                 </button>
                                 <button onclick="approvalManager.rejectOne(${assignment.id})"
                                         class="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700">
-                                    Reject
+                                    Rechazar
                                 </button>
                             </div>
                             ` : ''}
@@ -355,40 +351,41 @@
                     if (response.ok) {
                         Swal.fire({
                             icon: 'success',
-                            title: 'Approved!',
-                            text: `${ids.length} assignment(s) have been approved`,
+                            title: '¡Aprobado!',
+                            text: `${ids.length} asignación(es) aprobada(s)`,
                             confirmButtonColor: '#10b981'
                         });
                         this.selectedIds.clear();
                         this.loadAssignments();
                     } else {
-                        throw new Error(result.error || 'Failed to approve');
+                        throw new Error(result.error || 'Error al aprobar');
                     }
                 } catch (error) {
                     console.error('Error approving:', error);
                     Swal.fire({
                         icon: 'error',
                         title: 'Error',
-                        text: error.message || 'Failed to approve assignments'
+                        text: error.message || 'Error al aprobar asignaciones'
                     });
                 }
             }
 
             async rejectOne(id) {
                 const { value: reason } = await Swal.fire({
-                    title: 'Reject Assignment',
+                    title: 'Rechazar Asignación',
                     input: 'textarea',
-                    inputLabel: 'Rejection Reason',
-                    inputPlaceholder: 'Enter reason for rejection...',
+                    inputLabel: 'Motivo de Rechazo',
+                    inputPlaceholder: 'Ingrese motivo de rechazo...',
                     inputAttributes: {
-                        'aria-label': 'Rejection reason'
+                        'aria-label': 'Motivo de rechazo'
                     },
                     showCancelButton: true,
-                    confirmButtonText: 'Reject',
+                    confirmButtonText: 'Rechazar',
+                    cancelButtonText: 'Cancelar',
                     confirmButtonColor: '#ef4444',
                     inputValidator: (value) => {
                         if (!value) {
-                            return 'Please provide a reason for rejection';
+                            return 'Por favor proporcione un motivo de rechazo';
                         }
                     }
                 });
@@ -402,19 +399,20 @@
                 if (this.selectedIds.size === 0) return;
 
                 const { value: reason } = await Swal.fire({
-                    title: `Reject ${this.selectedIds.size} Assignment(s)`,
+                    title: `Rechazar ${this.selectedIds.size} Asignación(es)`,
                     input: 'textarea',
-                    inputLabel: 'Rejection Reason',
-                    inputPlaceholder: 'Enter reason for rejection...',
+                    inputLabel: 'Motivo de Rechazo',
+                    inputPlaceholder: 'Ingrese motivo de rechazo...',
                     inputAttributes: {
-                        'aria-label': 'Rejection reason'
+                        'aria-label': 'Motivo de rechazo'
                     },
                     showCancelButton: true,
-                    confirmButtonText: 'Reject All',
+                    confirmButtonText: 'Rechazar Todas',
+                    cancelButtonText: 'Cancelar',
                     confirmButtonColor: '#ef4444',
                     inputValidator: (value) => {
                         if (!value) {
-                            return 'Please provide a reason for rejection';
+                            return 'Por favor proporcione un motivo de rechazo';
                         }
                     }
                 });
@@ -429,7 +427,7 @@
                     const response = await fetch('/api/admin/assignments/reject', {
                         method: 'PATCH',
                         headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ 
+                        body: JSON.stringify({
                             assignment_ids: ids,
                             rejection_reason: reason
                         })
@@ -440,21 +438,21 @@
                     if (response.ok) {
                         Swal.fire({
                             icon: 'success',
-                            title: 'Rejected',
-                            text: `${ids.length} assignment(s) have been rejected`,
+                            title: 'Rechazado',
+                            text: `${ids.length} asignación(es) rechazada(s)`,
                             confirmButtonColor: '#ef4444'
                         });
                         this.selectedIds.clear();
                         this.loadAssignments();
                     } else {
-                        throw new Error(result.error || 'Failed to reject');
+                        throw new Error(result.error || 'Error al rechazar');
                     }
                 } catch (error) {
                     console.error('Error rejecting:', error);
                     Swal.fire({
                         icon: 'error',
                         title: 'Error',
-                        text: error.message || 'Failed to reject assignments'
+                        text: error.message || 'Error al rechazar asignaciones'
                     });
                 }
             }
@@ -480,9 +478,7 @@
             }
         }
 
-        // Initialize
         const approvalManager = new AdminApprovalManager();
     </script>
 </body>
 </html>
-

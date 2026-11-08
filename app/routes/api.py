@@ -426,7 +426,7 @@ class AssignmentService:
 @api_bp.route('/stores')
 def api_stores():
     if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
+        return jsonify({'error': 'No autorizado'}), 401
 
     conn = get_db_connection()
     stores = conn.execute(
@@ -448,7 +448,7 @@ def api_stores():
 @api_bp.route('/market-centers', methods=['POST'])
 def api_market_centers():
     if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
+        return jsonify({'error': 'No autorizado'}), 401
 
     try:
         data = request.get_json()
@@ -480,7 +480,7 @@ def api_market_centers():
 @api_bp.route('/search-stores')
 def api_search_stores():
     if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
+        return jsonify({'error': 'No autorizado'}), 401
 
     query = request.args.get('q', '').strip()
     if not query:
@@ -540,7 +540,7 @@ def api_search_stores():
 @api_bp.route('/search-clients')
 def api_search_clients():
     if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
+        return jsonify({'error': 'No autorizado'}), 401
 
     query = request.args.get('q', '').strip()
     if not query:
@@ -568,7 +568,7 @@ def api_search_clients():
 @api_bp.route('/approve-store/<int:store_id>', methods=['POST'])
 def approve_store(store_id):
     if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
+        return jsonify({'error': 'No autorizado'}), 401
 
     user = db.session.query(User).filter_by(id=session['user_id']).first()
     if not user or user.user_type_id != 1:
@@ -623,7 +623,7 @@ def approve_store(store_id):
 @api_bp.route('/approve-client/<int:client_id>', methods=['POST'])
 def approve_client(client_id):
     if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
+        return jsonify({'error': 'No autorizado'}), 401
 
     user = db.session.query(User).filter_by(id=session['user_id']).first()
     if not user or user.user_type_id != 1:
@@ -674,7 +674,7 @@ def approve_client(client_id):
 def create_store():
     """Create a new pending store"""
     if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
+        return jsonify({'error': 'No autorizado'}), 401
 
     try:
         data = request.get_json(silent=True)
@@ -755,7 +755,7 @@ def create_store():
 def create_salesman():
     """Create a new pending salesman (client)"""
     if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
+        return jsonify({'error': 'No autorizado'}), 401
 
     data = request.get_json(silent=True)
     if not data or not isinstance(data, dict):
@@ -820,7 +820,7 @@ def create_salesman():
 def get_store_assignments(store_type, store_id):
     """Get all assignments for a store"""
     if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
+        return jsonify({'error': 'No autorizado'}), 401
     
     try:
         role = request.args.get('role', 'SALESMAN')
@@ -851,7 +851,7 @@ def get_store_assignments(store_type, store_id):
 def get_available_staff():
     """Get staff available for assignment to a store"""
     if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
+        return jsonify({'error': 'No autorizado'}), 401
     
     try:
         store_type = request.args.get('store_type', 'store')
@@ -859,7 +859,7 @@ def get_available_staff():
         role = request.args.get('role', 'SALESMAN')
         
         if not store_id:
-            return jsonify({'error': 'store_id required'}), 400
+            return jsonify({'error': 'store_id requerido'}), 400
         
         available = AssignmentService.get_available_staff(
             store_type, store_id, role, session['user_id']
@@ -877,7 +877,7 @@ def get_available_staff():
 def bulk_assign():
     """Bulk create/remove assignments for a store"""
     if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
+        return jsonify({'error': 'No autorizado'}), 401
     
     try:
         data = request.get_json()
@@ -889,12 +889,12 @@ def bulk_assign():
         unassign_ids = data.get('unassign', [])
 
         if not store_id:
-            return jsonify({'error': 'store_id required', 'field': 'store_id'}), 400
+            return jsonify({'error': 'store_id requerido', 'field': 'store_id'}), 400
 
         if store_type not in ('store', 'pending_store'):
-            return jsonify({'error': 'Invalid store_type'}), 400
+            return jsonify({'error': 'Tipo de tienda inválido'}), 400
         if role not in ('SALESMAN', 'PROMOTER'):
-            return jsonify({'error': 'Invalid role'}), 400
+            return jsonify({'error': 'Rol inválido'}), 400
 
         # Verify store ownership
         if store_type == 'store':
@@ -936,16 +936,16 @@ def bulk_assign():
         
         return jsonify({
             'success': True,
-            'message': 'Assignment changes submitted for approval',
+            'message': 'Cambios de asignación enviados para aprobación',
             'created': len(created),
             'removed': removed_count
         })
     except KeyError as e:
         db.session.rollback()
         return jsonify({
-            'error': f'Missing required field: {str(e)}',
+            'error': f'Campo requerido faltante: {str(e)}',
             'field': str(e),
-            'details': 'Check that all staff objects have required fields'
+            'details': 'Verifique que todos los objetos tengan los campos requeridos'
         }), 400
     except Exception:
         db.session.rollback()
@@ -957,12 +957,12 @@ def bulk_assign():
 def get_pending_assignments():
     """Get all pending assignments (admin only)"""
     if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
+        return jsonify({'error': 'No autorizado'}), 401
     
     # Check if user is admin
     user = db.session.query(User).filter_by(id=session['user_id']).first()
     if not user or user.user_type_id != 1:  # Assuming 1 is admin
-        return jsonify({'error': 'Admin access required'}), 403
+        return jsonify({'error': 'Acceso de administrador requerido'}), 403
     
     try:
         status_filter = request.args.get('status', 'PENDING')
@@ -1061,25 +1061,25 @@ def get_pending_assignments():
 def approve_assignments():
     """Approve pending assignments (admin only)"""
     if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
+        return jsonify({'error': 'No autorizado'}), 401
     
     # Check if user is admin
     user = db.session.query(User).filter_by(id=session['user_id']).first()
     if not user or user.user_type_id != 1:  # Assuming 1 is admin
-        return jsonify({'error': 'Admin access required'}), 403
+        return jsonify({'error': 'Acceso de administrador requerido'}), 403
     
     try:
         data = request.get_json()
         assignment_ids = data.get('assignment_ids', [])
         
         if not assignment_ids:
-            return jsonify({'error': 'assignment_ids required'}), 400
+            return jsonify({'error': 'assignment_ids requerido'}), 400
         
         updated = AssignmentService.approve_assignments(assignment_ids, session['user_id'])
         
         return jsonify({
             'success': True,
-            'message': f'{updated} assignments approved',
+            'message': f'{updated} asignaciones aprobadas',
             'approved_count': updated
         })
     except Exception as e:
@@ -1091,26 +1091,26 @@ def approve_assignments():
 def reject_assignments():
     """Reject pending assignments (admin only)"""
     if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
+        return jsonify({'error': 'No autorizado'}), 401
     
     # Check if user is admin
     user = db.session.query(User).filter_by(id=session['user_id']).first()
     if not user or user.user_type_id != 1:  # Assuming 1 is admin
-        return jsonify({'error': 'Admin access required'}), 403
+        return jsonify({'error': 'Acceso de administrador requerido'}), 403
     
     try:
         data = request.get_json()
         assignment_ids = data.get('assignment_ids', [])
-        reason = data.get('rejection_reason') or data.get('reason') or 'No reason provided'
+        reason = data.get('rejection_reason') or data.get('reason') or 'Sin motivo proporcionado'
         
         if not assignment_ids:
-            return jsonify({'error': 'assignment_ids required'}), 400
+            return jsonify({'error': 'assignment_ids requerido'}), 400
         
         updated = AssignmentService.reject_assignments(assignment_ids, session['user_id'], reason)
         
         return jsonify({
             'success': True,
-            'message': f'{updated} assignments rejected',
+            'message': f'{updated} asignaciones rechazadas',
             'rejected_count': updated
         })
     except Exception as e:
@@ -1122,25 +1122,25 @@ def reject_assignments():
 def mark_synced():
     """Mark assignments as synced to ERP (admin only)"""
     if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
+        return jsonify({'error': 'No autorizado'}), 401
     
     # Check admin permission
     user = User.query.get(session['user_id'])
     if not user or user.user_type.name != 'ADMIN':
-        return jsonify({'error': 'Admin access required'}), 403
+        return jsonify({'error': 'Acceso de administrador requerido'}), 403
     
     try:
         data = request.get_json()
         assignment_ids = data.get('assignment_ids', [])
         
         if not assignment_ids:
-            return jsonify({'error': 'assignment_ids required'}), 400
+            return jsonify({'error': 'assignment_ids requerido'}), 400
         
         updated = AssignmentService.mark_synced_to_erp(assignment_ids)
         
         return jsonify({
             'success': True,
-            'message': f'{updated} assignments marked as synced',
+            'message': f'{updated} asignaciones sincronizadas',
             'synced_count': updated
         })
     except Exception as e:
